@@ -50,14 +50,20 @@
 #define WIFI_CONNECTED_EVENT BIT0
 #define WIFI_DISCONNECTED_EVENT BIT1
 
-#ifdef CONFIG_TWOMES_TEST_SERVER
+// Server selection. CONFIG_TWOMES_SERVER_HOSTNAME takes precedence, so a build can point to its own server
+// without code changes, e.g. in platformio.ini:
+//   build_flags = '-D CONFIG_TWOMES_SERVER_HOSTNAME="api.example.org"'
+#if defined(CONFIG_TWOMES_SERVER_HOSTNAME)
+constexpr const char *TWOMES_SERVER_HOSTNAME = CONFIG_TWOMES_SERVER_HOSTNAME;
+constexpr const char *TWOMES_SERVER = "https://" CONFIG_TWOMES_SERVER_HOSTNAME;
+#elif defined(CONFIG_TWOMES_TEST_SERVER)
 constexpr const char *TWOMES_SERVER_HOSTNAME = "api.tst.energietransitiewindesheim.nl";
 constexpr const char *TWOMES_SERVER = "https://api.tst.energietransitiewindesheim.nl";
-#endif
-
-#ifdef CONFIG_TWOMES_PRODUCTION_SERVER
+#elif defined(CONFIG_TWOMES_PRODUCTION_SERVER)
 constexpr const char *TWOMES_SERVER_HOSTNAME = "api.energietransitiewindesheim.nl";
 constexpr const char *TWOMES_SERVER = "https://api.energietransitiewindesheim.nl";
+#else
+#error "No server configured: define CONFIG_TWOMES_SERVER_HOSTNAME, CONFIG_TWOMES_TEST_SERVER or CONFIG_TWOMES_PRODUCTION_SERVER"
 #endif
 
 constexpr int WIFI_MAX_CONNECT_TRIES = 10;
