@@ -50,14 +50,20 @@
 #define WIFI_CONNECTED_EVENT BIT0
 #define WIFI_DISCONNECTED_EVENT BIT1
 
-#ifdef CONFIG_NFH_TEST_SERVER
+// Server selection. CONFIG_NFH_SERVER_HOSTNAME takes precedence, so a build can point to its own server
+// without code changes, e.g. in platformio.ini:
+//   build_flags = '-D CONFIG_NFH_SERVER_HOSTNAME="api.example.org"'
+#if defined(CONFIG_NFH_SERVER_HOSTNAME)
+constexpr const char *NFH_SERVER_HOSTNAME = CONFIG_NFH_SERVER_HOSTNAME;
+constexpr const char *NFH_SERVER = "https://" CONFIG_NFH_SERVER_HOSTNAME;
+#elif defined(CONFIG_NFH_TEST_SERVER)
 constexpr const char *NFH_SERVER_HOSTNAME = "api.tst.energietransitiewindesheim.nl";
 constexpr const char *NFH_SERVER = "https://api.tst.energietransitiewindesheim.nl";
-#endif
-
-#ifdef CONFIG_NFH_PRODUCTION_SERVER
+#elif defined(CONFIG_NFH_PRODUCTION_SERVER)
 constexpr const char *NFH_SERVER_HOSTNAME = "api.energietransitiewindesheim.nl";
 constexpr const char *NFH_SERVER = "https://api.energietransitiewindesheim.nl";
+#else
+#error "No server configured: define CONFIG_NFH_SERVER_HOSTNAME, CONFIG_NFH_TEST_SERVER or CONFIG_NFH_PRODUCTION_SERVER"
 #endif
 
 constexpr int WIFI_MAX_CONNECT_TRIES = 10;
