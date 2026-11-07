@@ -52,7 +52,7 @@
     ],
     "dependencies": {
         "bm8563": "https://github.com/tuupola/bm8563",
-        "lovyan03/LovyanGFX": "^0.4.18"
+        "lovyan03/LovyanGFX": "^1.3.0"
     },
     "frameworks": "espidf",
     "platforms": "esp32"
