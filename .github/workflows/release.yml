@@ -27,11 +27,13 @@ jobs:
     steps:
       # Checkout repository.
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
       
       # Setup Python (needed by PlatformIO)
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
 
       # Setup PlatformIO.
       - name: Setup PlatformIO
@@ -39,7 +41,7 @@ jobs:
 
       # Cache build directory.
       - name: Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v6
         with:
           path: .pio
           key: ${{ runner.os }}-${{ hashFiles('src/**') }}
@@ -60,7 +62,7 @@ jobs:
         
       # Sign the firmware
       - name: Sign firmware
-        uses: espressif/esp-idf-ci-action@main
+        uses: espressif/esp-idf-ci-action@v1.2.0
         with:
           command: espsecure.py sign_data -v1 --keyfile secure_boot_signing_key.pem --output $BUILD_DIR/firmware-signed_${{ matrix.platformio_env }}.bin $BUILD_DIR/firmware.bin
       
@@ -76,7 +78,7 @@ jobs:
       
       # Create a release draft if this tag is on the main branch.
       - name: Create draft release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
