@@ -108,6 +108,8 @@ namespace Buttons
                 s_gpioEventQueue = xQueueCreate(10, sizeof(Button));
 
                 auto err = gpio_install_isr_service(0);
+                if (err == ESP_ERR_INVALID_STATE)
+                    err = ESP_OK; // Already installed (shared by all buttons).
                 Error::CheckAppendName(err, TAG, "An error occured when installing isr service");
 
                 err = xTaskCreatePinnedToCore(ButtonPressHandlerTask,

@@ -674,31 +674,22 @@ namespace GenericESP32Firmware
             if (json == nullptr)
             {
                 ESP_LOGE(TAG, "An error occured when parsing JSON.");
+                return;
             }
 
-            auto jsonAuthorizationToken = cJSON_GetObjectItem(json, "authorization_token");
-            if (json == nullptr)
+            auto authorizationToken = cJSON_GetStringValue(cJSON_GetObjectItem(json, "authorization_token"));
+            if (authorizationToken == nullptr)
             {
-                ESP_LOGE(TAG, "An error occured when parsing JSON.");
+                ESP_LOGE(TAG, "No authorization_token in the activation response.");
+                cJSON_Delete(json);
+                return;
             }
-
-            auto authorizationToken = cJSON_GetStringValue(jsonAuthorizationToken);
             SetBearer(authorizationToken);
 
-            auto jsonDeviceType = cJSON_GetObjectItem(json, "device_type");
-            if (json == nullptr)
-            {
-                ESP_LOGE(TAG, "An error occured when parsing JSON.");
-            }
-
-            auto jsonInfoURL = cJSON_GetObjectItem(jsonDeviceType, "info_url");
-            if (json == nullptr)
-            {
-                ESP_LOGE(TAG, "An error occured when parsing JSON.");
-            }
-
-            auto infoURL = cJSON_GetStringValue(jsonInfoURL);
-            SetInfoURL(infoURL);
+            // Optional: API v2 returned device_type.info_url; API v3 does not. Keep the default then.
+            auto infoURL = cJSON_GetStringValue(cJSON_GetObjectItem(cJSON_GetObjectItem(json, "device_type"), "info_url"));
+            if (infoURL != nullptr)
+                SetInfoURL(infoURL);
 
             cJSON_Delete(json);
         }
@@ -757,6 +748,14 @@ namespace GenericESP32Firmware
 #endif
 
         ActivateDevice();
+        if (GetBearer().empty())
+        {
+            // Activation failed (e.g. server unreachable). Uploads cannot work without a bearer,
+            // so try again after a pause by restarting, as the firmware implicitly did before.
+            ESP_LOGE(TAG, "Device activation failed; restarting in 60 s to try again.");
+            vTaskDelay(Delay::Seconds(60));
+            esp_restart();
+        }
 
 #ifdef CONFIG_TWOMES_PRESENCE_DETECTION
         ControlPanel::initialzeButtons();

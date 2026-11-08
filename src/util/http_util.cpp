@@ -44,10 +44,13 @@ namespace HTTPUtil
             return ESP_OK;
         }
 
+        // Transport error (no HTTP status received). Distinct from real HTTP status codes like 400.
+        constexpr int HTTP_TRANSPORT_ERROR = -1;
+
         int Cleanup(esp_http_client_handle_t &client)
         {
             esp_http_client_cleanup(client);
-            return 400;
+            return HTTP_TRANSPORT_ERROR;
         }
     }
 
@@ -97,8 +100,11 @@ namespace HTTPUtil
         if (err != ESP_OK)
         {
             // We were not able to connect after HTTPS_CONNECTION_RETRIES.
-            // Reboot to avoid worse.
-            esp_restart();
+            // Do not reboot: that threw away all buffered measurements and caused reboot loops
+            // while the server or the internet connection was down. Callers keep their data
+            // and try again at the next scheduled moment.
+            ESP_LOGE(TAG, "Giving up this request; the caller will retry later.");
+            return Cleanup(client);
         }
 
         if (dataSend.size() > 0)

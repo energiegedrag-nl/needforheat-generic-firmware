@@ -5,8 +5,8 @@ on:
     branches: [ main, release/v3 ]
     paths-ignore:
       - '**.md'
+  # Build every PR, whatever its base branch (also stacked PRs).
   pull_request:
-    branches: [ main, release/v3 ]
     paths-ignore:
       - '**.md'
   schedule:

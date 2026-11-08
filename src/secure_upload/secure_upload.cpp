@@ -7,6 +7,10 @@
 
 #include <cJSON.h>
 
+#include <cstdlib>
+#include <ctime>
+#include <vector>
+
 #include <generic_esp_32.hpp>
 
 constexpr const char *TAG = "Secure upload";
@@ -27,8 +31,41 @@ namespace SecureUpload
 		ESP_LOGD(TAG, "Queue created.");
 	}
 
+	namespace
+	{
+		/**
+		 * A timestamp is plausible if its year lies between the firmware build year - 1 and + 10.
+		 * Measurements taken before the first NTP sync (1970) or with a garbage RTC value (e.g. 2036)
+		 * are not uploaded: they would end up as wrong data in the analysis.
+		 */
+		bool IsPlausibleTime(time_t timestamp)
+		{
+			static const int buildYear = std::atoi(&__DATE__[7]); // __DATE__ = "Mmm dd yyyy"
+			struct tm utc = {};
+			gmtime_r(&timestamp, &utc);
+			int year = utc.tm_year + 1900;
+			return year >= buildYear - 1 && year <= buildYear + 10;
+		}
+
+		/**
+		 * Retry later only for failures that may go away: no connection, server errors, timeouts, rate limits.
+		 * Other 4xx answers will not change by retrying.
+		 */
+		bool IsRetryable(int statusCode)
+		{
+			return statusCode <= 0 || statusCode >= 500 || statusCode == 408 || statusCode == 429;
+		}
+	} // namespace
+
 	void Queue::AddMeasurement(const Measurements::Measurement &measurement)
 	{
+		if (!IsPlausibleTime(measurement.GetTimestamp()))
+		{
+			ESP_LOGW(TAG, "Measurement with implausible timestamp %lld skipped (clock not synced yet?).",
+					 static_cast<long long>(measurement.GetTimestamp()));
+			return;
+		}
+
 		auto measurementPtr = new Measurements::Measurement(std::move(measurement));
 
 		auto err = xQueueSend(m_measurementQueue, &measurementPtr, 0);
@@ -38,50 +75,76 @@ namespace SecureUpload
 
 	void Queue::Upload()
 	{
-		auto uploadObject = cJSON_CreateObject();
+		// Take everything that is queued now; new measurements may be added while we upload.
+		std::vector<Measurements::Measurement *> items;
+		Measurements::Measurement *item = nullptr;
+		while (xQueueReceive(m_measurementQueue, &item, 0) == pdTRUE)
+			items.push_back(item);
 
-		// Add device upload time.
-		auto uploadTime = cJSON_CreateNumber(time(nullptr));
-		cJSON_AddItemToObject(uploadObject, "device_time", uploadTime);
-
-		// Ddd measurements array
-		auto measurements = cJSON_CreateArray();
-		cJSON_AddItemToObject(uploadObject, "measurements", measurements);
-
-		int measurementItems = 0;
-
-		while (true)
-		{
-			auto item = new Measurements::Measurement();
-			if (xQueueReceive(m_measurementQueue, &item, 0) != pdTRUE)
-				break;
-
-			cJSON_AddItemToArray(measurements, item->GetJSON());
-			delete item;
-
-			measurementItems++;
-		}
-
-		if (measurementItems == 0)
+		if (items.empty())
 		{
 			ESP_LOGD(TAG, "There were no measurements in the upload queue.");
-			cJSON_Delete(uploadObject);
 			return;
 		}
 
-		HTTPUtil::buffer_t dataSend = cJSON_Print(uploadObject);
-		HTTPUtil::headers_t headersSend;
-		HTTPUtil::buffer_t dataReceive;
-		HTTPUtil::headers_t headersReceive;
+		auto uploadObject = cJSON_CreateObject();
 
-		auto statusCode = GenericESP32Firmware::PostHTTPSToBackend(ENDPOINT_VARIABLE_UPLOAD, dataSend, headersSend, dataReceive, headersReceive, true);
-		if (statusCode != 200)
+		// Add device upload time.
+		cJSON_AddItemToObject(uploadObject, "device_time", cJSON_CreateNumber(time(nullptr)));
+
+		// Add measurements array.
+		auto measurements = cJSON_CreateArray();
+		cJSON_AddItemToObject(uploadObject, "measurements", measurements);
+		for (auto measurement : items)
+			cJSON_AddItemToArray(measurements, measurement->GetJSON());
+
+		// Compact JSON (smaller upload); cJSON allocates the string, so it must be freed.
+		char *json = cJSON_PrintUnformatted(uploadObject);
+		cJSON_Delete(uploadObject);
+
+		int statusCode = -1;
+		HTTPUtil::buffer_t dataReceive;
+		if (json != nullptr)
 		{
-			ESP_LOGE(TAG, "Posting to backend returned statuscode %d.", statusCode);
+			HTTPUtil::buffer_t dataSend(json);
+			cJSON_free(json);
+
+			HTTPUtil::headers_t headersSend;
+			HTTPUtil::headers_t headersReceive;
+			statusCode = GenericESP32Firmware::PostHTTPSToBackend(ENDPOINT_VARIABLE_UPLOAD, dataSend, headersSend, dataReceive, headersReceive, true);
 		}
 
-		ESP_LOGD(TAG, "Backend server response body: \n%s", dataReceive.c_str());
+		if (statusCode == 200)
+		{
+			ESP_LOGD(TAG, "Uploaded %u measurements.", static_cast<unsigned>(items.size()));
+			for (auto measurement : items)
+				delete measurement;
+			return;
+		}
 
-		cJSON_Delete(uploadObject);
+		ESP_LOGE(TAG, "Posting to backend returned statuscode %d. Response: %s", statusCode, dataReceive.c_str());
+
+		if (!IsRetryable(statusCode))
+		{
+			ESP_LOGE(TAG, "Not retryable: %u measurements dropped.", static_cast<unsigned>(items.size()));
+			for (auto measurement : items)
+				delete measurement;
+			return;
+		}
+
+		// Put the measurements back in front of the queue (keeping their order), for the next upload.
+		// If the queue is full, the oldest ones are dropped.
+		unsigned dropped = 0;
+		for (auto it = items.rbegin(); it != items.rend(); ++it)
+		{
+			Measurements::Measurement *measurement = *it;
+			if (xQueueSendToFront(m_measurementQueue, &measurement, 0) != pdTRUE)
+			{
+				delete measurement;
+				dropped++;
+			}
+		}
+		ESP_LOGW(TAG, "Kept %u measurements for the next upload, dropped %u (queue full).",
+				 static_cast<unsigned>(items.size()) - dropped, dropped);
 	}
 } // namespace SecureUpload
