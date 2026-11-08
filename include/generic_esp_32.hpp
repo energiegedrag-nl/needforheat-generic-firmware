@@ -6,9 +6,15 @@
 
 #include <util/http_util.hpp>
 
-constexpr const char *ENDPOINT_VARIABLE_UPLOAD = "/v2/upload";
-constexpr const char *ENDPOINT_FIXED_INTERVAL_UPLOAD = "/v2/device/measurements/fixed-interval"; // Deprecated.
-constexpr const char *ENDPOINT_DEVICE_ACTIVATION = "/v2/device/activate";
+// API path prefix of the NeedForHeat server. Default "/v3", the current server API.
+// Servers that still publish the device endpoints under /v2 can be reached with:
+//   build_flags = '-D CONFIG_TWOMES_API_PREFIX="/v2"'
+#ifndef CONFIG_TWOMES_API_PREFIX
+#define CONFIG_TWOMES_API_PREFIX "/v3"
+#endif
+constexpr const char *ENDPOINT_VARIABLE_UPLOAD = CONFIG_TWOMES_API_PREFIX "/upload";
+constexpr const char *ENDPOINT_FIXED_INTERVAL_UPLOAD = CONFIG_TWOMES_API_PREFIX "/device/measurements/fixed-interval"; // Deprecated.
+constexpr const char *ENDPOINT_DEVICE_ACTIVATION = CONFIG_TWOMES_API_PREFIX "/device/activate";
 
 namespace GenericESP32Firmware
 {
