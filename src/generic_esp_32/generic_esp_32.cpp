@@ -57,11 +57,11 @@
 constexpr const char *TWOMES_SERVER_HOSTNAME = CONFIG_TWOMES_SERVER_HOSTNAME;
 constexpr const char *TWOMES_SERVER = "https://" CONFIG_TWOMES_SERVER_HOSTNAME;
 #elif defined(CONFIG_TWOMES_TEST_SERVER)
-constexpr const char *TWOMES_SERVER_HOSTNAME = "api.tst.energietransitiewindesheim.nl";
-constexpr const char *TWOMES_SERVER = "https://api.tst.energietransitiewindesheim.nl";
+constexpr const char *TWOMES_SERVER_HOSTNAME = "api.tst.energiegedrag.nl";
+constexpr const char *TWOMES_SERVER = "https://api.tst.energiegedrag.nl";
 #elif defined(CONFIG_TWOMES_PRODUCTION_SERVER)
-constexpr const char *TWOMES_SERVER_HOSTNAME = "api.energietransitiewindesheim.nl";
-constexpr const char *TWOMES_SERVER = "https://api.energietransitiewindesheim.nl";
+constexpr const char *TWOMES_SERVER_HOSTNAME = "api.energiegedrag.nl";
+constexpr const char *TWOMES_SERVER = "https://api.energiegedrag.nl";
 #else
 #error "No server configured: define CONFIG_TWOMES_SERVER_HOSTNAME, CONFIG_TWOMES_TEST_SERVER or CONFIG_TWOMES_PRODUCTION_SERVER"
 #endif
