@@ -1,7 +1,7 @@
 #ifndef CERTS_H
 #define CERTS_H
 
-// This is the embedded root CA certificate for api.energietransitiewindesheim.nl.
+// This is the embedded root CA certificate for api.energiegedrag.nl.
 extern const char isrg_root_pem_start[] asm("_binary_isrg_root_pem_start");
 extern const char isrg_root_pem_end[] asm("_binary_isrg_root_pem_end");
 

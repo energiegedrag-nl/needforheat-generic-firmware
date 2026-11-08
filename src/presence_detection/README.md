@@ -1,5 +1,5 @@
 # NeedForHeat presence detection library
-This library can be used to enable presence detection of occupants in a home in [NeedForHeat measurement devices](https://github.com/energietransitie/needforheat-generic-firmware), by detecting the presence of absence of their smartphones via Bluetooth.
+This library can be used to enable presence detection of occupants in a home in [NeedForHeat measurement devices](https://github.com/energiegedrag-nl/needforheat-generic-firmware), by detecting the presence of absence of their smartphones via Bluetooth.
 
 ## Table of contents
 * [General info](#general-info)
@@ -13,7 +13,7 @@ This library can be used to enable presence detection of occupants in a home in 
 
 ## General info
 Presence detection of home occupants helps the NeedForHeat research project in three ways:
-1. Humans exhale CO₂ and are one of the primary sources of CO₂ in a room or house. Presence detection data provides additional insights in the variations that cause the CO₂-concentration in a room or house to rise. This additional data is expected to increase the precision of algorithms that aim to establish the contribution of voluntary ventilation to heat losses, based on CO₂-concentrations measured with the [NeedForHeat Living Room Module](https://github.com/energietransitie/needforheat-living-room-module-firmware).
+1. Humans exhale CO₂ and are one of the primary sources of CO₂ in a room or house. Presence detection data provides additional insights in the variations that cause the CO₂-concentration in a room or house to rise. This additional data is expected to increase the precision of algorithms that aim to establish the contribution of voluntary ventilation to heat losses, based on CO₂-concentrations measured with the [NeedForHeat Living Room Module](https://github.com/energiegedrag-nl/needforheat-living-room-module-firmware).
 2. Detecting presence in combination with thermostat programs, setpoints or indoor temperatures allow for the detection of inefficient heating behaviour and/or settings, such as heating a home when no one is present (soon).
 3. Humans produce (a little) heat: the average Dutch citizen produces about 80 W when sleeping and about 100 W when awake. When present in the home, this heat contributes (a little) to the heating balance of the home. Data about the presence of absence of occupants helps to improve the heating balance (a little), compared to just taking the average sleeping, presence, and absence patterns of Dutch citizens.
 
@@ -30,7 +30,7 @@ We also considered using another approach, just listening for Bluetooth advertis
 So, ultimately, we chose the approach using targeted Bluetooth name requests to well-known smartphones of persons that gave consent for their presence to be tracked via their smartphone.
 
 ## Prerequisites
-In addition to [prerequisites of NeedForHeat measurement devices in general](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/README.md#prerequisites), in the current version of the firmware, before [developing](#developing) and [deploying](#deploying), you need to obtain the static Bluetooth MAC addresses of the smartphones of the inhabitants of the home whose presence you want to detect. Currently, there is no automated support for this. Instructions:
+In addition to [prerequisites of NeedForHeat measurement devices in general](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/README.md#prerequisites), in the current version of the firmware, before [developing](#developing) and [deploying](#deploying), you need to obtain the static Bluetooth MAC addresses of the smartphones of the inhabitants of the home whose presence you want to detect. Currently, there is no automated support for this. Instructions:
 * on English Android devices, go to `Settings` > `System` (skip on some models) > `About Phone` > `Status`; the value can be read under `Bluetooth address` (at least, on Android 10, provided that Bluetooth is turned on);
 * on Dutch Android devices, go to `Instellingen` > `Systeem` (skip on some models) > `Info telefoon` > `Status`; the value can be read under `Bluetooth-adres` (at least, on Android 10, provided that Bluetooth is turned on);
 * on English iPhones, go to `Settings` > `General` > `About`; the value can be read under `Bluetooth` and copied via press-and-hold on the entry (at least, on iOS 12);
@@ -41,10 +41,10 @@ On all devices, the static Bluetooth MAC address is represented on the screen so
 ## Deploying
 The current version of the presence-detection-enabled firmware requires that you add the list of static Bluetooth MAC addresses to detect the presence of during compilation. For more information, see the next section, [Developing](#developing).
 
-Deployment of binary releases can be done in the same way as other [NeedForHeat measurement devices](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/README.md#deploying).
+Deployment of binary releases can be done in the same way as other [NeedForHeat measurement devices](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/README.md#deploying).
 
 ## Developing
-See [NeedForHeat measurement devices](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/README.md#developing).
+See [NeedForHeat measurement devices](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/README.md#developing).
 
 In addition, in the current version you have to make changes the source code.
 
@@ -58,7 +58,7 @@ You also have to add the static Bluetooth addresses in the file `presence_detect
 ## Features
 List of features ready and TODOs for future development. Ready:
 * scanning for well-known static Bluetooth addresses;
-* uploading presence data to [NeedForHeat server](https://github.com/energietransitie/needforheat-server-configuration) via Wi-Fi.
+* uploading presence data to [NeedForHeat server](https://github.com/energiegedrag-nl/needforheat-server-configuration) via Wi-Fi.
 
 To-do:
 * provisioning of the account-specific list of static Bluetooth addresses during device preparation phase in the lab via a file on non-volatile device storage (most likely, SPIFFS), which is read by the firmware at startup;
@@ -68,9 +68,9 @@ To-do:
 Project is: _in progress_
 
 ## License
-See [NeedForHeat measurement devices](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/README.md#license).
+See [NeedForHeat measurement devices](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/README.md#license).
 
 ## Credits
-See [NeedForHeat measurement devices](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/README.md#credits).
+See [NeedForHeat measurement devices](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/README.md#credits).
 
 This work was inspired by the [monitor](https://github.com/andrewjfreyer/monitor) program for Raspberry Pi, by Andrew J Freyer.

@@ -12,6 +12,6 @@ NeedForHeat provisioning is the process that involves:
     - device-app activation
     - device-server activation  
 
- In a separate pdf document, we provide an [overview of needforheat provisioning and the steps and roles played by a NeedForHeat measurement device, app, and API](https://github.com/energietransitie/needforheat-server-api/blob/main/docs/needforheat-provisioning.pdf).
+ In a separate pdf document, we provide an [overview of needforheat provisioning and the steps and roles played by a NeedForHeat measurement device, app, and API](https://github.com/energiegedrag-nl/needforheat-server-api/blob/main/docs/needforheat-provisioning.pdf).
 
-> For a future version of  the [needforheat-server-api](https://github.com/energietransitie/needforheat-server-api/) repository, we consider migrating this seperate pdf document to MkDocs pages like these. Feel free to make a fork and Pull Request for this!
+> For a future version of  the [needforheat-server-api](https://github.com/energiegedrag-nl/needforheat-server-api/) repository, we consider migrating this seperate pdf document to MkDocs pages like these. Feel free to make a fork and Pull Request for this!

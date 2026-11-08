@@ -1,8 +1,8 @@
 # Device preparation
 
-This section describes how a device running firmware based on the needforheat-generic-firmware library should be prepared to work together with a [NeedForHeat server](https://github.com/energietransitie/needforheat-server-configuration) using the [NeedForHeat API](https://github.com/energietransitie/needforheat-server-api).
+This section describes how a device running firmware based on the needforheat-generic-firmware library should be prepared to work together with a [NeedForHeat server](https://github.com/energiegedrag-nl/needforheat-server-configuration) using the [NeedForHeat API](https://github.com/energiegedrag-nl/needforheat-server-api).
 
-Currently, each device instance must be registered on a [NeedForHeat server](https://github.com/energietransitie/needforheat-server-configuration) via the [NeedForHeat API](https://github.com/energietransitie/needforheat-server-api) before the server accepts data send data to it from that device.
+Currently, each device instance must be registered on a [NeedForHeat server](https://github.com/energiegedrag-nl/needforheat-server-configuration) via the [NeedForHeat API](https://github.com/energiegedrag-nl/needforheat-server-api) before the server accepts data send data to it from that device.
 
 ## Erase all persistenly stored data
 
@@ -23,14 +23,14 @@ After this command you should perform the full NeedForHeat device preparation fl
 
 1. Upload firmware to the ESP32 device
 2. Find the device name and activation_token
-3. Register the device on the [NeedForHeat server](https://github.com/energietransitie/needforheat-server-configuration) using the [NeedForHeat API](https://github.com/energietransitie/needforheat-server-api)
+3. Register the device on the [NeedForHeat server](https://github.com/energiegedrag-nl/needforheat-server-configuration) using the [NeedForHeat API](https://github.com/energiegedrag-nl/needforheat-server-api)
 4. Generating a QR-code and print the QR_code<br>
 > For measurement devices that use the [M5Stack CoreInk](https://github.com/m5stack/M5-CoreInk), this last step can be skipped, since the firmware automatically displays the QR-code on the e-ink screen of the device.
  
 
 ## Step 1: Upload firmware to the ESP32 device
 
-1. Download the [binary release for your device](https://github.com/energietransitie/needforheat-generic-firmware/releases) and extract it to a directory of your choice.
+1. Download the [binary release for your device](https://github.com/energiegedrag-nl/needforheat-generic-firmware/releases) and extract it to a directory of your choice.
 2. Connect the device with a USB cable to the PC.
 3. If you used the device before, you shoud first [erase all persistenly stored data](#erase-all-persistenly-stored-data)
 4.	Open a comand prompt in the directory you chose to download and extract the binary releases in and enter the following:
@@ -82,5 +82,5 @@ To generate a QR-code, you can use any QR-code generator. When generating QR-cod
 If you want to repurpose and existing device (e.g. use it in another home), you should:
 
 * erase all persistently stored data on the device;
-* after the value in the `name` column of the existing device entry in the database, append something like `-OLD` and click on `SAVE` (for the NeedForHeat test database, you can do this via [CloudBeaver](https://db.energietransitiewindesheim.nl/#/));
+* after the value in the `name` column of the existing device entry in the database, append something like `-OLD` and click on `SAVE` (for the NeedForHeat test database, you can do this via [CloudBeaver](https://db.energiegedrag.nl/#/));
 *  proceed with regular device preparation.

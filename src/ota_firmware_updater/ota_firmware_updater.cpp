@@ -28,7 +28,7 @@
 #define UPDATE_DOWNLOAD_URL "https://github.com/%s/%s/releases/download/%s/%s"
 
 // Set the user-agent to the repository, so GitHub can reach out if necessary.
-#define USER_AGENT_VALUE "github.com/energietransitie/needforheat-generic-firmware"
+#define USER_AGENT_VALUE "github.com/energiegedrag-nl/needforheat-generic-firmware"
 
 #define TASK_STACK_DEPTH 16384
 

@@ -7,7 +7,7 @@ For most cases, we recommend to [start with a new project](new-project.md). Shou
 The needforheat-generic-firmware library can be added to your PlatformIO project by declaring this repository as a dependency in your `platformio.ini` file:
 
 ```ini title="platformio.ini"
-lib_deps = https://github.com/energietransitie/needforheat-generic-firmware
+lib_deps = https://github.com/energiegedrag-nl/needforheat-generic-firmware
 ```
 
 ### Configuration
@@ -31,4 +31,4 @@ build_flags =
     -D"$PIOENV"
 ```
 
-> See [`platformio.ini`](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/platformio.ini) for all settings.
+> See [`platformio.ini`](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/platformio.ini) for all settings.

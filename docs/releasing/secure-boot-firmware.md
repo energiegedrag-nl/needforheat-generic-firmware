@@ -20,7 +20,7 @@ esptool.py --chip esp32 --baud 460800 --before default_reset --after hard_reset 
 ```
 
 ## GitHub Actions workflow
-The [GitHub Actions workflow](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/.github/workflows/release.yml) needs a secret with the name `SECURE_BOOTLOADER_SIGNING_KEY` in order to sign the firmware. This key needs to be set in `Settings > Secrets > Actions`.
+The [GitHub Actions workflow](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/.github/workflows/release.yml) needs a secret with the name `SECURE_BOOTLOADER_SIGNING_KEY` in order to sign the firmware. This key needs to be set in `Settings > Secrets > Actions`.
 
 1. Generate a secure boot signing key:
   ```shell
