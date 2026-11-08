@@ -22,7 +22,6 @@ Items that touch several repositories are written out in full in one *lead* repo
 - [ ] <a id="einkstatus"></a>**Show device status on the e-ink screen.** After provisioning, show the time of the last measurement and the last successful upload (local time) and, while provisioning, which step the device is in, including failures. Optionally show current values (CO2, temperature, RH, persons; P1 power). Also affects: needforheat-living-room-module-firmware, needforheat-p1-reader-firmware. *(Trello #303, #867, #1218, #499)*
 - [ ] → Freeze after scanning a device and switching apps — see [needforheat-gearup-app](https://github.com/energiegedrag-nl/needforheat-gearup-app/blob/main/TODO.md#freeze) *(Trello #772)*
 - [ ] → Investigate data gaps of the living room module — see [needforheat-living-room-module-firmware](https://github.com/energiegedrag-nl/needforheat-living-room-module-firmware/blob/main/TODO.md#lrmgaps) *(Trello #1024)*
-- [ ] → Weather location: H3 level 5 with random noise — see [needforheat-gearup-app](https://github.com/energiegedrag-nl/needforheat-gearup-app/blob/main/TODO.md#h3noise) *(Trello #689)*
 
 ## Later: features and ideas
 
