@@ -4,7 +4,7 @@ The purpose of a device info page is to inform people that encounter your measur
 
 On a [M5Stack CoreInk](https://github.com/m5stack/M5-CoreInk) device, after the device was provisioned, the e-ink screen can show a QR-code and a text like "scan for mor info". Your device info page is shown to people that scan the QR-code, typically from their smartphone. 
 
-The contents of the folder [`/docs/device-info/`](https://github.com/energietransitie/needforheat-presence-detector/blob/main/docs/devic-einfo) of a NeedForHeat measurement device repository can be used as the template for your device info page. 
+The contents of the folder [`/docs/device-info/`](https://github.com/energiegedrag-nl/needforheat-presence-detector-firmware/blob/main/docs/devic-einfo) of a NeedForHeat measurement device repository can be used as the template for your device info page. 
 
 ## Prerequisites
 
@@ -27,17 +27,17 @@ If you change or add styles in the stylesheet, please make sure this is done con
 
 ## Deploying
 
-> In a future version of this repository, we plan do automate deploying device info pages to GitHub Pages. Most likely, the deployment will be to the `/<github-repository-name>/device_info/` folder of your GitHub Pages server. For example, the NeedForHeat Generic-Test measurement device info page will most likely be hosted at [https://energietransitiewindesheim.nl/needforheat-generic-firmware/device_info/](https://energietransitiewindesheim.nl/needforheat-generic-firmware/device_info/); the NeedForHeat Presence Detection measurement device info page will most likely be hosted at [https://energietransitiewindesheim.nl/needforheat-presence-detector/device_info/](https://energietransitiewindesheim.nl/needforheat-presence-detector/device_info/)
+> In a future version of this repository, we plan do automate deploying device info pages to GitHub Pages. Most likely, the deployment will be to the `/<github-repository-name>/device_info/` folder of your GitHub Pages server. For example, the NeedForHeat Generic-Test measurement device info page will most likely be hosted at [https://energiegedrag.nl/needforheat-generic-firmware/device_info/](https://energiegedrag.nl/needforheat-generic-firmware/device_info/); the NeedForHeat Presence Detection measurement device info page will most likely be hosted at [https://energiegedrag.nl/needforheat-presence-detector/device_info/](https://energiegedrag.nl/needforheat-presence-detector/device_info/)
 
 Upload the contents to a webserver, like [GitHub Pages](https://pages.github.com/). Be sure to include all files in the folder `/docs/device_info/`: not only the the file `index.html`, but also all resources referred to in this file, like images.
 
 > The information below is deprecated and applies to member of the [Research Group Energy Transition](https://github.com/energietransitie) only.
 
-Files must be added in a feature branch in a subfolder named `<device_type.name>` of the GitHub Pages repository folder `energietransitie.github.io/<measurement-campaign>/info/<device_type.name>/`. Then create a Pull Request and ask [@hterhofte](https://github.com/hterhofte) to review and merge. After this, the device info pages are available via `https://energietransitiewindesheim.nl/<measurement-campaign>/<device_type.name>/info/`. 
+Files must be added in a feature branch in a subfolder named `<device_type.name>` of the GitHub Pages repository folder `energietransitie.github.io/<measurement-campaign>/info/<device_type.name>/`. Then create a Pull Request and ask [@hterhofte](https://github.com/hterhofte) to review and merge. After this, the device info pages are available via `https://energiegedrag.nl/<measurement-campaign>/<device_type.name>/info/`. 
 
 Example
 
 - The contents of the installation manual for the `CO2-meter-SCD4x` device type is stored in GitHub Pages repository folder [energietransitie.github.io/brains4buildings2022/info/CO2-meter-SCD4x/](https://github.com/energietransitie/energietransitie.github.io/tree/main/brains4buildings2022/info/CO2-meter-SCD4x/). 
 - We manually created an edu.nl short link [https://edu.nl/4pujw](https://edu.nl/4pujw).
-- This edu.nl short link refers to [https://www.energietransitiewindesheim.nl/brains4buildings2022/info/CO2-meter-SCD4x/](https://www.energietransitiewindesheim.nl/brains4buildings2022/info/CO2-meter-SCD4x/).
+- This edu.nl short link refers to [https://energiegedrag.nl/brains4buildings2022/info/CO2-meter-SCD4x/](https://energiegedrag.nl/brains4buildings2022/info/CO2-meter-SCD4x/).
 

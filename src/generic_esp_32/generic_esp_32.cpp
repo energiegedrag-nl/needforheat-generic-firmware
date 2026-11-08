@@ -57,11 +57,11 @@
 constexpr const char *NFH_SERVER_HOSTNAME = CONFIG_NFH_SERVER_HOSTNAME;
 constexpr const char *NFH_SERVER = "https://" CONFIG_NFH_SERVER_HOSTNAME;
 #elif defined(CONFIG_NFH_TEST_SERVER)
-constexpr const char *NFH_SERVER_HOSTNAME = "api.tst.energietransitiewindesheim.nl";
-constexpr const char *NFH_SERVER = "https://api.tst.energietransitiewindesheim.nl";
+constexpr const char *NFH_SERVER_HOSTNAME = "api.tst.energiegedrag.nl";
+constexpr const char *NFH_SERVER = "https://api.tst.energiegedrag.nl";
 #elif defined(CONFIG_NFH_PRODUCTION_SERVER)
-constexpr const char *NFH_SERVER_HOSTNAME = "api.energietransitiewindesheim.nl";
-constexpr const char *NFH_SERVER = "https://api.energietransitiewindesheim.nl";
+constexpr const char *NFH_SERVER_HOSTNAME = "api.energiegedrag.nl";
+constexpr const char *NFH_SERVER = "https://api.energiegedrag.nl";
 #else
 #error "No server configured: define CONFIG_NFH_SERVER_HOSTNAME, CONFIG_NFH_TEST_SERVER or CONFIG_NFH_PRODUCTION_SERVER"
 #endif

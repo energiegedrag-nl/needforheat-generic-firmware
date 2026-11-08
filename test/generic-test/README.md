@@ -1,6 +1,6 @@
 # NeedForHeat Generic-Test example
 
-This example is a PlatformIO project that uses the [needforheat-generic-firmware](https://github.com/energietransitie/needforheat-generic-firmware) library. To work with this example, (clone this reposotory and) open the root directory of the NeedForHeat Generic-Test example in Visual Studio Code.
+This example is a PlatformIO project that uses the [needforheat-generic-firmware](https://github.com/energiegedrag-nl/needforheat-generic-firmware) library. To work with this example, (clone this reposotory and) open the root directory of the NeedForHeat Generic-Test example in Visual Studio Code.
 
 ## Table of contents
 * [General info](#general-info)
@@ -13,13 +13,13 @@ This example is a PlatformIO project that uses the [needforheat-generic-firmware
 * [Credits](#credits)
 
 ## General info
-The NeedForHeat Generic-Test example only sends [generic data sent by any NeedForHeat measurement device](https://github.com/energietransitie/needforheat-generic-firmware#readme) a NeedForHeat server.
+The NeedForHeat Generic-Test example only sends [generic data sent by any NeedForHeat measurement device](https://github.com/energiegedrag-nl/needforheat-generic-firmware#readme) a NeedForHeat server.
 
 ## Deploying
-To deploy this software, see the [deploying section in the needforheat-generic-firmware library documentation](https://www.energietransitiewindesheim.nl/needforheat-generic-firmware/deploying/prerequisites/)
+To deploy this software, see the [deploying section in the needforheat-generic-firmware library documentation](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/docs/deploying/prerequisites.md)
 
 ## Developing
-To develop software for, or based on this software, see the [developing section in the needforheat-generic-firmware library documentation](https://www.energietransitiewindesheim.nl/needforheat-generic-firmware/getstarted/prerequisites/)
+To develop software for, or based on this software, see the [developing section in the needforheat-generic-firmware library documentation](https://github.com/energiegedrag-nl/needforheat-generic-firmware)
 
 ## Supported devices
 This example was tested on:
@@ -33,7 +33,7 @@ The example features generic firmware tasks, excluding Bluetooth-based presence 
 
 Ready:
 * Generic firmware tasks
-* Use [NeedForHeat generic ESP32 firmware library](https://github.com/energietransitie/needforheat-generic-firmware)
+* Use [NeedForHeat generic ESP32 firmware library](https://github.com/energiegedrag-nl/needforheat-generic-firmware)
 
 To-do:
 * Move manual page(s) from needforheat-generic-firmware folder to this example
@@ -54,4 +54,4 @@ Product owners:
 
 We use and gratefully acknowlegde the efforts of the makers of the following source code and libraries:
 * [ESP-IDF](https://github.com/espressif/esp-idf), by Espressif Systems, licensed under [Apache License 2.0](https://github.com/espressif/esp-idf/blob/9d34a1cd42f6f63b3c699c3fe8ec7216dd56f36a/LICENSE)
-* [NeedForHeat Generic ESP Firmware](https://github.com/energietransitie/needforheat-generic-firmware), by Research group Energy Transition, Windesheim University of Applied Sciences, licensed under [Apache License 2.0](https://github.com/energietransitie/needforheat-generic-firmware/blob/main/LICENSE.md)
+* [NeedForHeat Generic ESP Firmware](https://github.com/energiegedrag-nl/needforheat-generic-firmware), by Research group Energy Transition, Windesheim University of Applied Sciences, licensed under [Apache License 2.0](https://github.com/energiegedrag-nl/needforheat-generic-firmware/blob/main/LICENSE.md)

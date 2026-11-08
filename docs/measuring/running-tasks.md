@@ -10,14 +10,14 @@ The needforheat-generic-firmware library comes with support for the following ge
 |-----------------------------------------------|--------------------------------------------------------------------------------|------------------|
 | [Heartbeat](#heartbeat-task)             | Creates a heartbeat measurement and places it on the queue.                      | 10 minutes       |
 | [Battery voltage](#battery-voltage-task) | Measures the battery voltage and places it on the queue. | 10 minutes       |
-| [Upload](#upload-task)                   | Uploads the contents of the secure upload queue to a [NeedForHeat server](https://github.com/energietransitie/needforheat-server-configuration).             | 10 minutes       |
+| [Upload](#upload-task)                   | Uploads the contents of the secure upload queue to a [NeedForHeat server](https://github.com/energiegedrag-nl/needforheat-server-configuration).             | 10 minutes       |
 | [Time sync](#time-sync-task)             | Synchronizes the device clock via NTP                           | 24 hours         |
 | [OTA firmware update](#ota-firmware-update-task) | Checks for OTA firmware updates and installs them          | 48 hours         |
 | [Presence detection](#presence-detection-task) | Sends Bluetooth name requests to specific static MAC addresses and places a response count on the queue. | 10 minutes |
 
 #### Upload task
 
-The upload task uploads all the contents of the [secure upload queue](./measuring.md#adding-a-measurement-to-the-upload-queue) to a [NeedForHeat server](https://github.com/energietransitie/needforheat-server-configuration).
+The upload task uploads all the contents of the [secure upload queue](./measuring.md#adding-a-measurement-to-the-upload-queue) to a [NeedForHeat server](https://github.com/energiegedrag-nl/needforheat-server-configuration).
 
 #### Heartbeat task
 

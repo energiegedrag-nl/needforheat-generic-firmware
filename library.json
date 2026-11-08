@@ -5,7 +5,7 @@
     "keywords": "needforheat, m5stack, espidf",
     "repository": {
         "type": "git",
-        "url": "https://github.com/energietransitie/needforheat-generic-firmware.git"
+        "url": "https://github.com/energiegedrag-nl/needforheat-generic-firmware.git"
     },
     "authors": [
         {
@@ -43,7 +43,7 @@
         }
     ],
     "license": "Apache-2.0",
-    "homepage": "https://www.energietransitiewindesheim.nl/",
+    "homepage": "https://energiegedrag.nl/",
     "examples": [
         {
             "name": "Presence detector",

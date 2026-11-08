@@ -2,7 +2,7 @@
 
 The purpose of a device installation manual is to help the subjects of your measurement campaign to install, power and connect your your specific measurement device. 
 
-The contents of the folder [`/docs/installation-manual/`](https://github.com/energietransitie/needforheat-presence-detector/blob/main/docs/installation-manual) of a NeedForHeat measurement device repository can be used as a template for this. 
+The contents of the folder [`/docs/installation-manual/`](https://github.com/energiegedrag-nl/needforheat-presence-detector-firmware/blob/main/docs/installation-manual) of a NeedForHeat measurement device repository can be used as a template for this. 
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ To edit and preview the device installation manual, you need:
 - a plain text editor (or your favourite IDE).
 
 ## Editing
-Adapt the content of `index.html` to fit the needs of your measurement device type. Be sure to use the language of the intended audience of your [NeedForHeat provisioning app](https://github.com/energietransitie/needforheat-gearup-app). After scanning its QR-code, the device installation manual of your device type is presented to the user by your [NeedForHeat provisioning app](https://github.com/energietransitie/needforheat-gearup-app). 
+Adapt the content of `index.html` to fit the needs of your measurement device type. Be sure to use the language of the intended audience of your [NeedForHeat provisioning app](https://github.com/energiegedrag-nl/needforheat-gearup-app). After scanning its QR-code, the device installation manual of your device type is presented to the user by your [NeedForHeat provisioning app](https://github.com/energiegedrag-nl/needforheat-gearup-app). 
 
 The default styles are:
 * `div.video-block` with predefined styling for (embedded videos);
@@ -31,18 +31,18 @@ By default, your preview is now in 'Responsive' mode. Using the dropdown menu (a
 
 ## Deploying
 
-> In a future version of this repository, we plan do automate deploying device installation manual pages to GitHub Pages. Most likely, the deployment will be to the `/<github-repository-name>/installation_manual/` folder of your GitHub Pages server. For example, the NeedForHeat Generic-Test measurement device installation manual will most likely be hosted at [https://energietransitiewindesheim.nl/needforheat-generic-firmware/installation_manual/](https://energietransitiewindesheim.nl/needforheat-generic-firmware/installation_manual/); the NeedForHeat Presence Detection measurement device installation manual will most likely be hosted at [https://energietransitiewindesheim.nl/needforheat-presence-detector/installation_manual/](https://energietransitiewindesheim.nl/needforheat-presence-detector/installation_manual/)
+> In a future version of this repository, we plan do automate deploying device installation manual pages to GitHub Pages. Most likely, the deployment will be to the `/<github-repository-name>/installation_manual/` folder of your GitHub Pages server. For example, the NeedForHeat Generic-Test measurement device installation manual will most likely be hosted at [https://energiegedrag.nl/needforheat-generic-firmware/installation_manual/](https://energiegedrag.nl/needforheat-generic-firmware/installation_manual/); the NeedForHeat Presence Detection measurement device installation manual will most likely be hosted at [https://energiegedrag.nl/needforheat-presence-detector/installation_manual/](https://energiegedrag.nl/needforheat-presence-detector/installation_manual/)
 
 Upload the contents to a webserver, like [GitHub Pages](https://pages.github.com/). Be sure to include all files in the folder `/docs/installation_manual/`: not only the the file `index.html`, but also all resources referred to in this file, like images.
 
 > The information below is deprecated and applies to member of the [Research Group Energy Transition](https://github.com/energietransitie) only.
 
-For the [NeedForHeat WarmteWachter app](https://github.com/energietransitie/needforheat-gearup-app), files must be added in a feature branch in a  subfolder named `<device_type.name>` of the GitHub Pages repository folder [energietransitie.github.io/manuals/](https://github.com/energietransitie/energietransitie.github.io/tree/main/manuals). Then create a Pull Request and ask [@hterhofte](https://github.com/hterhofte) to review and merge. After this, the installation manual pages are available via `https://energietransitiewindesheim.nl/manuals/<device_type.name>/` for the [NeedForHeat WarmteWachter app](https://github.com/energietransitie/needforheat-gearup-app). 
+For the [NeedForHeat WarmteWachter app](https://github.com/energiegedrag-nl/needforheat-gearup-app), files must be added in a feature branch in a  subfolder named `<device_type.name>` of the GitHub Pages repository folder [energietransitie.github.io/manuals/](https://github.com/energietransitie/energietransitie.github.io/tree/main/manuals). Then create a Pull Request and ask [@hterhofte](https://github.com/hterhofte) to review and merge. After this, the installation manual pages are available via `https://energiegedrag.nl/manuals/<device_type.name>/` for the [NeedForHeat WarmteWachter app](https://github.com/energiegedrag-nl/needforheat-gearup-app). 
 
 Example: 
 
 - The contents of the installation manual for the `Generic-Test` device type is stored in GitHub Pages repository folder [energietransitie.github.io/manuals/Presence-Detector/](https://github.com/energietransitie/energietransitie.github.io/tree/main/manuals/Presence-Detector/). 
-- The [NeedForHeat WarmteWachter app](https://github.com/energietransitie/needforheat-gearup-app) opens the manual via [https://www.energietransitiewindesheim.nl/manuals/Presence-Detector/](https://www.energietransitiewindesheim.nl/manuals/Presence-Detector/).
-- To get a [preview](#previewing) on a regular browser, open [https://www.energietransitiewindesheim.nl/manuals/Presence-Detector/preview.html](https://www.energietransitiewindesheim.nl/manuals/Presence-Detector/preview.html).
+- The [NeedForHeat WarmteWachter app](https://github.com/energiegedrag-nl/needforheat-gearup-app) opens the manual via [https://energiegedrag.nl/manuals/Presence-Detector/](https://energiegedrag.nl/manuals/Presence-Detector/).
+- To get a [preview](#previewing) on a regular browser, open [https://energiegedrag.nl/manuals/Presence-Detector/preview.html](https://energiegedrag.nl/manuals/Presence-Detector/preview.html).
 
 

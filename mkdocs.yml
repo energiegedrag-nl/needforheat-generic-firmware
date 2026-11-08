@@ -4,7 +4,7 @@ site_description: Documentation for the NeedForHeat generic firmware library.
 site_url: https://energietransitie.github.io/needforheat-generic-firmware
 
 # Repository
-repo_url: https://github.com/energietransitie/needforheat-generic-firmware
+repo_url: https://github.com/energiegedrag-nl/needforheat-generic-firmware
 edit_uri: edit/main/docs/
 
 # Copyright
