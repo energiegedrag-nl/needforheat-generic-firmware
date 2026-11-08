@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include <i2c_hal.h>
 #include <esp_log.h>
+#include <stdlib.h>
 
 // private global variables
 bm8563_t bm8563;
@@ -32,6 +33,15 @@ void rtc_syncronize_sys_time() {
  struct timezone tz = {0, 0}; // UTC+0
   // retrieve rtc time
   bm8563_read(&bm8563, &rtc_time);
+
+  // Only trust the RTC if its year is plausible (build year - 1 .. + 10); otherwise wait for NTP.
+  // A drained RTC produced timestamps in 2036 (Trello #886).
+  int build_year = atoi(&__DATE__[7]); // __DATE__ = "Mmm dd yyyy"
+  int rtc_year = rtc_time.tm_year + 1900;
+  if (rtc_year < build_year - 1 || rtc_year > build_year + 10) {
+    ESP_LOGW("RTC", "Ignoring implausible RTC time (year %d); waiting for NTP.", rtc_year);
+    return;
+  }
   tv.tv_sec = mktime(&rtc_time);
 
   // set system time

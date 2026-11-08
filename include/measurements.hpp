@@ -86,6 +86,11 @@ namespace Measurements
 		 */
 		cJSON *GetJSON();
 
+		/**
+		 * Unix timestamp of this measurement.
+		 */
+		time_t GetTimestamp() const { return m_timestamp; }
+
 	private:
 		/**
 		 * This map holds all the format strings for specific property types.

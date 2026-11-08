@@ -62,10 +62,10 @@ namespace Scheduler
 			// Signal that the task is done.
 			xEventGroupSetBits(s_tasksEventGroup, 1 << task->id);
 
-			// Delete the TaskWrapperInfo pointer.
-			delete task;
-
 			ESP_LOGD(task->name.c_str(), "task finished.");
+
+			// Delete the TaskWrapperInfo pointer (only after its last use).
+			delete task;
 
 			// Delete this FreeRTOS task.
 			vTaskDelete(nullptr);
