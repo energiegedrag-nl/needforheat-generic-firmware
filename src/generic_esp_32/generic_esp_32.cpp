@@ -34,6 +34,7 @@
 #include <generic_tasks.hpp>
 #include <measurements.hpp>
 #include <secure_upload.hpp>
+#include <persistent_store.hpp>
 #include <ota_firmware_updater.hpp>
 
 #ifdef CONFIG_TWOMES_PROV_TRANSPORT_BLE
@@ -118,13 +119,52 @@ namespace GenericESP32Firmware
         static gpio_num_t s_wifiResetLED = LED_WIFI_RESET;
 
 #ifdef M5STACK_COREINK
-        static Screen s_screen;
+        static Screen &s_screen = Screen::Instance();
 
         static M5CoreInkSpecific::PowerOffTimeout s_powerOffTimeout(PRE_PROVISIONING_POWER_OFF_TIMEOUT_S);
+
+        static std::string s_provisioningSsid;
 #endif // M5STACK_COREINK
 
         // Forward declare.
         std::string GetBearer();
+
+        /** HTTP status of the last activation attempt (0: none or no connection), for the screen. */
+        static int s_lastActivationStatus = 0;
+
+#ifdef M5STACK_COREINK
+        /** "TEST" for a test server, empty for production; the server name otherwise. */
+        std::string ServerBadge()
+        {
+            auto host = GetServerHostname();
+            if (host.find(".tst.") != std::string::npos || host.rfind("tst.", 0) == 0 || host.find("test") != std::string::npos)
+                return "TEST";
+            return "";
+        }
+
+        std::string ServerStepLabel()
+        {
+            auto badge = ServerBadge();
+            return "Server: " + (badge.empty() ? std::string("productie") : badge);
+        }
+
+        /** Provisioning progress on the e-ink screen; stage 0: Wi-Fi being tried, 1: Wi-Fi failed, 2: activating. */
+        void ShowProvisioningProgress(int stage, const std::string &ssid)
+        {
+            using S = Screen::StepState;
+            std::vector<Screen::Step> steps = {
+                {S::Done, "Bluetooth verbonden"},
+                {S::Done, ServerStepLabel()},
+                {stage == 0 ? S::Active : stage == 1 ? S::Failed : S::Done, "Wifi: " + ssid},
+                {stage == 2 ? S::Active : S::Todo, "Activeren"},
+            };
+            const char *message = stage == 0 ? "Verbinden met wifi... dit kan tot 30 seconden duren."
+                                : stage == 1 ? "Wifi lukt niet: klopt het wachtwoord, en is het een 2,4 GHz-netwerk? De module begint opnieuw."
+                                             : "Aanmelden bij de server...";
+            s_screen.DisplaySteps("Koppelen", stage == 2 ? "stap 3 van 3" : "stap 2 van 3", steps, message,
+                                  stage == 1 ? "" : "Houd de app open");
+        }
+#endif // M5STACK_COREINK
 
 #ifdef M5STACK_COREINK
         void PowerOff()
@@ -141,6 +181,8 @@ namespace GenericESP32Firmware
             // If the device was not provisioned and activated,
             // the provisioning QR will still be on screen.
 
+            // Let the refresh finish and power the panel down before the power is cut.
+            s_screen.PrepareForPowerOff();
             powerpin_reset();
         }
 #endif // M5STACK_COREINK
@@ -198,17 +240,27 @@ namespace GenericESP32Firmware
                     break;
                 case WIFI_PROV_CRED_RECV:
                     ESP_LOGD(TAG, "Received Wi-Fi credentials");
+#ifdef M5STACK_COREINK
+                    s_provisioningSsid = eventData ? std::string(reinterpret_cast<const char *>(static_cast<wifi_sta_config_t *>(eventData)->ssid)) : "";
+                    ShowProvisioningProgress(0, s_provisioningSsid);
+#endif // M5STACK_COREINK
                     break;
                 case WIFI_PROV_CRED_FAIL:
                     ESP_LOGE(TAG,
                              "Provisioning failed!\n\tReason : %s"
                              "\n\tRestarting in 5 seconds and try again...",
                              (*(wifi_prov_sta_fail_reason_t *)eventData == WIFI_PROV_STA_AUTH_ERROR) ? "Wi-Fi station authentication failed" : "Wi-Fi access-point not found");
+#ifdef M5STACK_COREINK
+                    ShowProvisioningProgress(1, s_provisioningSsid);
+#endif // M5STACK_COREINK
                     vTaskDelay(Delay::Seconds(5));
                     ResetWireless();
                     break;
                 case WIFI_PROV_CRED_SUCCESS:
                     ESP_LOGD(TAG, "Provisioning successful");
+#ifdef M5STACK_COREINK
+                    ShowProvisioningProgress(2, s_provisioningSsid);
+#endif // M5STACK_COREINK
                     break;
                 case WIFI_PROV_END:
                     // De-initialize manager once provisioning is finished.
@@ -670,7 +722,8 @@ namespace GenericESP32Firmware
 
 #if M5STACK_COREINK
             auto qrCodePayload = GetProvisioningQrPayload();
-            s_screen.DisplayQR(qrCodePayload, QR_PADDING);
+            s_screen.DisplayProvisioningQR(qrCodePayload, GetDeviceServiceName(), s_deviceTypeName,
+                                           esp_ota_get_app_description()->version);
 
             s_powerOffTimeout.Start();
 #endif // M5STACK_COREINK
@@ -749,6 +802,7 @@ namespace GenericESP32Firmware
                                                  dataReceive,
                                                  headersReceive,
                                                  false);
+            s_lastActivationStatus = statusCode;
             if (statusCode != 200)
             {
                 // Statuscode was not 200 (OK). Something went wrong
@@ -848,6 +902,13 @@ namespace GenericESP32Firmware
             // Activation failed (e.g. server unreachable). Uploads cannot work without a bearer,
             // so try again after a pause by restarting, as the firmware implicitly did before.
             ESP_LOGE(TAG, "Device activation failed; restarting in 60 s to try again.");
+#ifdef M5STACK_COREINK
+            s_screen.DisplayMessage("Activeren lukt niet",
+                                    {s_lastActivationStatus <= 0 ? "De server is niet bereikbaar. Over 60 seconden probeert de module het opnieuw."
+                                                                 : "De server weigert de module. Over 60 seconden probeert de module het opnieuw.",
+                                     "Blijft het mislukken? Reset de wifi met de knop en koppel opnieuw met de app."},
+                                    "code " + std::to_string(s_lastActivationStatus) + "  " + GetServerHostname());
+#endif // M5STACK_COREINK
             vTaskDelay(Delay::Seconds(60));
             esp_restart();
         }
@@ -947,6 +1008,34 @@ namespace GenericESP32Firmware
             vTaskDelay(200 / portTICK_PERIOD_MS);
         }
     }
+
+#ifdef M5STACK_COREINK
+    void DisplayStatus(Screen::Status status)
+    {
+        if (s_wifiEventGroup != nullptr)
+            status.wifiConnected = (xEventGroupGetBits(s_wifiEventGroup) & WIFI_CONNECTED_EVENT) != 0;
+        if (status.clock.empty())
+        {
+            time_t now = time(nullptr);
+            struct tm local;
+            localtime_r(&now, &local);
+            if (local.tm_year + 1900 >= 2024) // only a synchronised clock
+            {
+                char text[8];
+                strftime(text, sizeof(text), "%H:%M", &local);
+                status.clock = text;
+            }
+        }
+        if (status.badge.empty())
+            status.badge = ServerBadge();
+        if (status.footerLeft.empty())
+        {
+            auto pending = SecureUpload::PersistentStore::GetInstance().Pending();
+            status.footerLeft = pending == 0 ? std::string("alles verstuurd") : std::to_string(pending) + " metingen wachten";
+        }
+        s_screen.DisplayStatus(status);
+    }
+#endif // M5STACK_COREINK
 
     std::string GetServerHostname()
     {

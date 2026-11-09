@@ -1,6 +1,8 @@
 #pragma once
 
+#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 #include <util/strings.hpp>
 
@@ -8,66 +10,119 @@
 #include <LovyanGFX.h>
 #include <LGFX_AUTODETECT.hpp>
 
+/**
+ * E-ink screen of the M5Stack CoreInk (200x200, black and white).
+ *
+ * Every screen is drawn in a 1-bit off-screen buffer (5 KB) and sent to the panel in one go: no half-drawn
+ * screens or shifted text. A different screen gets a full refresh (no ghosting); small changes, such as the
+ * menu cursor or new measurement values, get a fast partial refresh, with a full refresh after every
+ * FAST_REFRESH_LIMIT fast ones. Layout: header bar, content, footer bar (design: "NeedForHeat e-ink GUI").
+ */
 class Screen
 {
 public:
-	/**
-	 * Create a new screen object.
-	 * This uses the LovyanGFX library.
-	 */
-	Screen();
+	/** One line of a progress screen (e.g. provisioning). */
+	enum class StepState
+	{
+		Todo,
+		Active,
+		Done,
+		Failed
+	};
+	struct Step
+	{
+		StepState state;
+		std::string label;
+	};
 
-	/**
-	 * Clear the screen.
-	 */
+	/** Overview screen of a device: one big value, up to three tiles, status in header and footer. */
+	struct Status
+	{
+		std::string clock;										// e.g. "14:20"; empty: not shown
+		bool wifiConnected = true;
+		std::string badge;										// e.g. "TEST" for a test server; empty: none
+		std::string bigLabel;									// e.g. "CO2 ppm"
+		std::string bigValue;									// e.g. "612"
+		std::vector<std::pair<std::string, std::string>> tiles; // label, value (at most 3)
+		std::string footerLeft;									// e.g. "sent 14:10, 0 waiting"
+		std::string footerRight;
+	};
+
+	/** The one screen object of the device (one panel, one buffer, one refresh state); created on first use. */
+	static Screen &Instance();
+
+	Screen();
+	Screen(const Screen &) = delete;
+	Screen &operator=(const Screen &) = delete;
+
+	/** Clear the screen (full refresh). */
 	void Clear();
 
 	/**
-	 * Show a QR code on the screen.
+	 * Show a QR code with an optional text below it (e.g. the info QR).
 	 *
 	 * @param payload QR code payload.
-	 * @param padding Minimum mount of white pixels around QR code.
+	 * @param padding Minimum amount of white pixels around the QR code.
 	 * @param text Optional text to show under the QR code.
 	 */
 	void DisplayQR(const std::string &payload, int padding, const std::string &text = "");
 
-	/**
-	 * Set details used for the Info QR screen.
-	 * 
-	 * Show this screen by calling DisplayInfoQR.
-	 *
-	 * @param payload QR code payload.
-	 * @param padding Minimum mount of white pixels around QR code.
-	 * @param text Optional text to show under the QR code.
-	 */
+	/** Provisioning QR: header, QR code, device name below it, footer (e.g. device type, version). */
+	void DisplayProvisioningQR(const std::string &payload, const std::string &deviceName,
+							   const std::string &footerLeft, const std::string &footerRight);
+
+	/** Progress screen: a list of steps, a message below them and a footer. */
+	void DisplaySteps(const std::string &title, const std::string &titleRight, const std::vector<Step> &steps,
+					  const std::string &message, const std::string &footer);
+
+	/** Message screen, e.g. an error with the next step. Paragraphs are wrapped. */
+	void DisplayMessage(const std::string &title, const std::vector<std::string> &paragraphs,
+						const std::string &footer);
+
+	/** Overview screen. Repeated calls with the same layout use a fast refresh. */
+	void DisplayStatus(const Status &status);
+
 	void SetInfoQRDetails(const std::string &payload, int padding, const std::string &text = "");
 
-	/**
-	 * Show info QR screen.
-	 * 
-	 * The details used for this are set by calling SetInfoQRDetails(..).
-	 * If no details were set, the function will do nothing.
-	 */
+	/** Show the info QR; does nothing if no details were set. */
 	void DisplayInfoQR();
 
 	/**
-	 * Display menu.
-	 * 
-	 * @param menItems array of strins containing all menu items (first item: title, last item: back)
-	 * @param highlightedLine Current hightlighted item
-	 * @param menuSize total number of items in menu.
+	 * Display a menu. Moving the highlight within the same menu uses a fast refresh.
+	 *
+	 * @param lines first item: title, last item: back.
+	 * @param highlightedLine index of the highlighted item.
 	 */
 	void DrawMenu(std::vector<std::string> lines, int highlightedLine);
 
+	/** Wait until the panel has finished refreshing and put it to sleep; call before cutting power. */
+	void PrepareForPowerOff();
+
 private:
+	static constexpr int FAST_REFRESH_LIMIT = 10;
+
+	enum class Refresh
+	{
+		Full,
+		Fast
+	};
+
+	void Begin();
+	void Header(const std::string &left, const std::string &right, bool rightInverted = false);
+	void Footer(const std::string &left, const std::string &right);
+	void Push(const std::string &screenKey);
+	std::string Fit(const std::string &text, int maxWidth);
+	int WrapText(const std::string &text, int x, int y, int maxWidth, int lineHeight);
+	void DrawQR(const std::string &payload, int x, int y, int maxSize);
+
 	// Storage for Info QR.
 	static std::string s_infoURL;
 	static std::string s_infoText;
 	static int s_infoPadding;
 
-private:
-	/**
-	 * LGFX display.
-	 */
 	LGFX e_ink_display;
+	LGFX_Sprite m_canvas;
+	int m_fastRefreshes = 0;
+	std::string m_screenKey; // identifies the layout on screen, to choose between a full and a fast refresh
+	std::recursive_mutex m_mutex;
 };
