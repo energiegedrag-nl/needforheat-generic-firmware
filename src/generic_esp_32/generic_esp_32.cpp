@@ -16,6 +16,7 @@
 
 #include <cJSON.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 
@@ -26,6 +27,7 @@
 #include <util/buttons.hpp>
 #include <util/buzzer.hpp>
 #include <util/screen.hpp>
+#include <util/provisioning_code.hpp>
 #include <specific_m5coreink/powerpin.h>
 #include <specific_m5coreink/rtc.h>
 #include <scheduler.hpp>
@@ -88,8 +90,8 @@ constexpr int NTP_MAX_WAIT_MS = 2 * 1000; // 2 seconds.
 constexpr const char *TAG = "Twomes generic ESP32 firmware library";
 constexpr const char *NVS_NAMESPACE = "twomes_storage";
 constexpr const char *DEVICE_SERVICE_NAME_PREFIX = "TWOMES-";
-constexpr const char *QR_CODE_PAYLOAD_TEMPLATE = "{\n\"ver\":\"v1\",\n\"name\":\"%s\",\n\"pop\":\"%u\",\n\"transport\":\"ble\"\n}";
-constexpr const char *POST_DEVICE_PAYLOAD_TEMPLATE = "{\n\"name\":\"%s\",\n\"device_type\":\"%s\",\n\"activation_token\":\"%u\"\n}";
+constexpr const char *QR_CODE_PAYLOAD_TEMPLATE = "{\n\"ver\":\"v1\",\n\"name\":\"%s\",\n\"pop\":\"%s\",\n\"transport\":\"ble\"\n}";
+constexpr const char *POST_DEVICE_PAYLOAD_TEMPLATE = "{\n\"name\":\"%s\",\n\"device_type\":\"%s\",\n\"activation_token\":\"%s\"\n}";
 constexpr const char *ACTIVATION_POST_REQUEST_TEMPLATE = "{\"name\":\"%s\"}";
 constexpr const char *POST_PROVISIONING_INFO_TEXT = "  Info? Scan!  ";
 constexpr int LONG_BUTTON_PRESS_DURATION = 10 * 2; // Number of half seconds to wait: (10 s * 2 halfseconds)
@@ -219,39 +221,47 @@ namespace GenericESP32Firmware
         }
 
         /**
-         * Get dat from NVS.
-         * If the dat does not exist, it will create it.
+         * Activation secret, also the proof of possession for provisioning ("dat"), as decimal text.
          *
-         * @returns dat.
+         * Devices that already have a 32-bit "dat" in NVS keep it: the server and any running provisioning
+         * know that value. New devices get a 64-bit secret ("pop64"), which the QR code v2 has room for.
          */
-        uint32_t GetDat()
+        std::string GetDat()
         {
-            uint32_t dat;
-            auto err = NVS::Get(NVS_NAMESPACE, "dat", dat);
+            uint32_t legacy;
+            auto err = NVS::Get(NVS_NAMESPACE, "dat", legacy);
             if (err == ESP_OK)
-            {
-                // dat was found.
-                return dat;
-            }
-
+                return std::to_string(legacy);
             if (err != ESP_ERR_NVS_NOT_FOUND)
-            {
-                // Something went wrong besides the key not existing.
-                // Log it.
                 Error::Check(err, TAG);
-                return dat;
-            }
 
-            // If we get here, the key does not exist.
-            // Create a new dat.
+            std::string pop;
+            err = NVS::Get(NVS_NAMESPACE, "pop64", pop);
+            if (err == ESP_OK && !pop.empty())
+                return pop;
 
-            ESP_LOGD(TAG, "'dat' was not found in NVS. Creating it now.");
-
-            dat = esp_random();
-            err = NVS::Set(NVS_NAMESPACE, "dat", dat);
+            ESP_LOGD(TAG, "No activation secret in NVS yet. Creating a 64-bit one.");
+            uint64_t value = (static_cast<uint64_t>(esp_random()) << 32) | esp_random();
+            if (value == 0)
+                value = 1;
+            pop = std::to_string(value);
+            err = NVS::Set(NVS_NAMESPACE, "pop64", pop);
             Error::Check(err, TAG);
+            return pop;
+        }
 
-            return dat;
+        /** Content of the provisioning QR code: v2 ("NFH:" + Base32) unless the build asks for the old JSON. */
+        std::string GetProvisioningQrPayload()
+        {
+            auto pop = GetDat();
+#ifdef CONFIG_NFH_QR_V1_JSON
+            return Format::String(QR_CODE_PAYLOAD_TEMPLATE, GetDeviceServiceName().c_str(), pop.c_str());
+#else
+            uint16_t deviceTypeHash = ~crc16_be((uint16_t)~0x0000, (const uint8_t *)s_deviceTypeName.c_str(), s_deviceTypeName.length());
+            uint8_t mac[6] = {};
+            esp_wifi_get_mac(WIFI_IF_STA, mac);
+            return ProvisioningCode::Make(deviceTypeHash, &mac[3], std::strtoull(pop.c_str(), nullptr, 10));
+#endif
         }
 
         /**
@@ -503,11 +513,8 @@ namespace GenericESP32Firmware
             if (Error::Check(err, TAG))
                 return err;
 
-            auto dat = GetDat();
-
             // Log the QR code.
-            auto deviceServiceName = GetDeviceServiceName();
-            auto qrCodePayload = Format::String(QR_CODE_PAYLOAD_TEMPLATE, deviceServiceName.c_str(), dat);
+            auto qrCodePayload = GetProvisioningQrPayload();
             ESP_LOGI(TAG,
                      "QR Code Payload: \n"
                      "\n\n%s\n\n",
@@ -662,7 +669,7 @@ namespace GenericESP32Firmware
             }
 
 #if M5STACK_COREINK
-            auto qrCodePayload = Format::String(QR_CODE_PAYLOAD_TEMPLATE, GetDeviceServiceName().c_str(), GetDat());
+            auto qrCodePayload = GetProvisioningQrPayload();
             s_screen.DisplayQR(qrCodePayload, QR_PADDING);
 
             s_powerOffTimeout.Start();
@@ -689,7 +696,7 @@ namespace GenericESP32Firmware
 #endif // CONFIG_TWOMES_PROV_TRANSPORT_BLE
 
             wifi_prov_security_t security = WIFI_PROV_SECURITY_1;
-            auto datStr = std::to_string(GetDat());
+            auto datStr = GetDat();
             auto serviceName = GetDeviceServiceName();
             // Extra endpoint for configuration from the app (which server to use); create before starting.
             err = wifi_prov_mgr_endpoint_create(PROV_CONFIG_ENDPOINT);
@@ -732,7 +739,7 @@ namespace GenericESP32Firmware
 
             HTTPUtil::buffer_t deviceActivationRequestData = Format::String(ACTIVATION_POST_REQUEST_TEMPLATE, GetDeviceServiceName().c_str());
             HTTPUtil::headers_t headersSend;
-            headersSend["Authorization"] = Format::String("Bearer %s", std::to_string(GetDat()).c_str());
+            headersSend["Authorization"] = Format::String("Bearer %s", GetDat().c_str());
 
             HTTPUtil::buffer_t dataReceive;
             HTTPUtil::headers_t headersReceive;

@@ -59,3 +59,5 @@ jobs:
         run: |
           g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/flash_log_test.cpp -o flash_log_test
           ./flash_log_test
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/provisioning_code_test.cpp -o provisioning_code_test
+          ./provisioning_code_test
