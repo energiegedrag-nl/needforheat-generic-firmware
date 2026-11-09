@@ -1,86 +1,57 @@
-name: Create draft release with binary files
-# Trigger on new tag
+name: Create draft release
+# The generic firmware is a library: device repositories use it through lib_deps with a tag, and they publish
+# the firmware binaries. A tag here therefore gets a check (host tests and a build of the test project) and a
+# draft release with release notes, without binaries and without signing (no secure boot; see TODO #480).
 on:
   push:
     tags:
       - "v*.*.*"
 
-env:
-  # Name of the archive .zip and .tar.gz archives without extension. Tag will be appended to this.
-  ARCHIVE_PREFIX: ${{ github.event.repository.name }}
-
 jobs:
-  build-and-draft-release:
+  build:
     runs-on: ubuntu-latest
-    environment: production
     strategy:
       matrix:
-        # List all of the PlatformIO platforms to build
         platformio_env: [ESP32DEV, M5STACK_COREINK]
-    env:
-      # Directory where the to-be-archived files are.
-      BUILD_DIR: .pio/build/${{ matrix.platformio_env }}
-      
-      # Files that need to be archived.
-      ARCHIVE_FILES: bootloader.bin firmware.bin firmware-signed_${{ matrix.platformio_env }}.bin ota_data_initial.bin partitions.bin
-
     steps:
-      # Checkout repository.
       - name: Checkout code
         uses: actions/checkout@v7
-      
-      # Setup Python (needed by PlatformIO)
+
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.10"
 
-      # Setup PlatformIO.
       - name: Setup PlatformIO
         run: pip install platformio
 
-      # Cache build directory.
-      - name: Cache
-        uses: actions/cache@v6
-        with:
-          path: .pio
-          key: ${{ runner.os }}-${{ hashFiles('src/**') }}
-          restore-keys: |
-            ${{ runner.os }}
-      
-      # Build the PlatformIO project.
-      - name: Build PlatformIO project
+      - name: Build test project
         env:
           PLATFORMIO_ENV: ${{ matrix.platformio_env }}
-        run: pio run -e $PLATFORMIO_ENV
+        run: pio run -e $PLATFORMIO_ENV -d test/generic-test
 
-      # Create secure_boot_signing_key.pem from GH secret SECURE_BOOTLOADER_SIGNING_KEY.
-      - name: Import SECURE_BOOTLOADER_SIGNING_KEY
-        env:
-          SECURE_BOOTLOADER_SIGNING_KEY: ${{ secrets.SECURE_BOOTLOADER_SIGNING_KEY }}
-        run: echo "$SECURE_BOOTLOADER_SIGNING_KEY" > ./secure_boot_signing_key.pem
-        
-      # Sign the firmware
-      - name: Sign firmware
-        uses: espressif/esp-idf-ci-action@v1.2.0
-        with:
-          command: espsecure.py sign_data -v1 --keyfile secure_boot_signing_key.pem --output $BUILD_DIR/firmware-signed_${{ matrix.platformio_env }}.bin $BUILD_DIR/firmware.bin
-      
-      # Set ARCHIVE_NAME variable from ARCHIVE_PREFIX and tag name.
-      - name: Set ARCHIVE_NAME
-        run: echo "ARCHIVE_NAME=${ARCHIVE_PREFIX}_${{ matrix.platformio_env }}_${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
-      
-      # Archive binary files.
-      - name: Archive binary files
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Host tests
         run: |
-          cd $BUILD_DIR
-          zip $ARCHIVE_NAME.zip $ARCHIVE_FILES
-      
-      # Create a release draft if this tag is on the main branch.
+          for t in test/host/*_test.cpp; do
+            [ -e "$t" ] || continue
+            g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include "$t" -o "${t%.cpp}"
+            "./${t%.cpp}"
+          done
+
+  draft-release:
+    needs: [build, host-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - name: Create draft release
         uses: softprops/action-gh-release@v3
         with:
           draft: true
-          files: |
-            ${{ env.BUILD_DIR }}/${{ env.ARCHIVE_NAME }}.zip
-            ${{ env.BUILD_DIR }}/firmware-signed_${{ matrix.platformio_env }}.bin
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
