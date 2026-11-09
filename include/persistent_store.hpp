@@ -12,8 +12,8 @@ namespace SecureUpload
      *
      * Uses the data partition labelled "nfhbuf" (any subtype) if the device firmware's partition table has one;
      * without it, Available() is false and the upload queue keeps measurements in RAM as before.
-     * Example partition line (192 KiB = 48 sectors; enough for several days of a living room module):
-     *   nfhbuf,   data, 0x40,    ,         0x30000,
+     * Example partition line (128 KiB = 32 sectors; about 3 days of a living room module at ~40 KiB a day):
+     *   nfhbuf,   data, 0x40,    0x3e0000, 0x20000,   (with OTA slots of 0x1e0000)
      */
     class PersistentStore
     {
