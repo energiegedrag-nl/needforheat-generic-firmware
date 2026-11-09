@@ -42,6 +42,12 @@ namespace SecureUpload
          */
         Queue();
 
+        /** Upload from the persistent buffer on flash (if the device has one), in batches. */
+        void UploadPersistent();
+
+        /** Upload what is buffered in RAM. */
+        void UploadMemory();
+
         /**
          * Queue of measurements to upload.
          */
