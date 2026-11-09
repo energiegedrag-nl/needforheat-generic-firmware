@@ -16,6 +16,9 @@
 
 #include <cJSON.h>
 
+#include <cstring>
+#include <vector>
+
 #include <util/error.hpp>
 #include <util/nvs.hpp>
 #include <util/format.hpp>
@@ -65,6 +68,16 @@ constexpr const char *TWOMES_SERVER = "https://api.energiegedrag.nl";
 #else
 #error "No server configured: define CONFIG_TWOMES_SERVER_HOSTNAME, CONFIG_TWOMES_TEST_SERVER or CONFIG_TWOMES_PRODUCTION_SERVER"
 #endif
+
+// Other servers this device may be pointed to during provisioning (custom endpoint "nfh-config"), e.g. a
+// test server next to production. Comma-separated host names; only these and TWOMES_SERVER_HOSTNAME are accepted:
+//   build_flags = '-D CONFIG_TWOMES_ALT_SERVER_HOSTNAMES="api.tst.energiegedrag.nl"'
+#if defined(CONFIG_TWOMES_ALT_SERVER_HOSTNAMES)
+constexpr const char *TWOMES_ALT_SERVER_HOSTNAMES = CONFIG_TWOMES_ALT_SERVER_HOSTNAMES;
+#else
+constexpr const char *TWOMES_ALT_SERVER_HOSTNAMES = "";
+#endif
+constexpr const char *PROV_CONFIG_ENDPOINT = "nfh-config";
 
 constexpr int WIFI_MAX_CONNECT_TRIES = 10;
 constexpr int WIFI_MAX_WAIT_MS = 30 * 1000; // 30 seconds.
@@ -246,6 +259,74 @@ namespace GenericESP32Firmware
          *
          * @returns bearer.
          */
+        /** Host names this device may upload to: the built-in one first, then the alternatives. */
+        std::vector<std::string> AllowedServerHostnames()
+        {
+            std::vector<std::string> hosts{TWOMES_SERVER_HOSTNAME};
+            std::string alt = TWOMES_ALT_SERVER_HOSTNAMES;
+            size_t start = 0;
+            while (start < alt.size())
+            {
+                size_t comma = alt.find(',', start);
+                std::string host = alt.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+                if (!host.empty())
+                    hosts.push_back(host);
+                if (comma == std::string::npos)
+                    break;
+                start = comma + 1;
+            }
+            return hosts;
+        }
+
+        bool IsAllowedServer(const std::string &host)
+        {
+            for (const auto &h : AllowedServerHostnames())
+                if (h == host)
+                    return true;
+            return false;
+        }
+
+        /**
+         * Handler of the provisioning endpoint "nfh-config". The app sends {"server":"<host>"} before it sends the
+         * Wi-Fi credentials; the session is already protected by the proof of possession from the QR code.
+         * Only host names compiled into the firmware are accepted, so a device cannot be pointed anywhere else.
+         * Answers {"ok":true,"server":"<host>"} or {"ok":false,"error":"...","allowed":[...]}.
+         */
+        esp_err_t ProvConfigHandler(uint32_t sessionId, const uint8_t *inbuf, ssize_t inlen, uint8_t **outbuf,
+                                    ssize_t *outlen, void *privData)
+        {
+            std::string request(reinterpret_cast<const char *>(inbuf), inbuf ? inlen : 0);
+            auto json = cJSON_Parse(request.c_str());
+            const char *server = json ? cJSON_GetStringValue(cJSON_GetObjectItem(json, "server")) : nullptr;
+            auto reply = cJSON_CreateObject();
+            if (server != nullptr && IsAllowedServer(server))
+            {
+                NVS::Set(NVS_NAMESPACE, "server_host", std::string(server));
+                cJSON_AddBoolToObject(reply, "ok", true);
+                cJSON_AddStringToObject(reply, "server", server);
+                ESP_LOGI(TAG, "Server set during provisioning: %s", server);
+            }
+            else
+            {
+                cJSON_AddBoolToObject(reply, "ok", false);
+                cJSON_AddStringToObject(reply, "error", server ? "server not allowed" : "expected {\"server\":\"<host>\"}");
+                auto allowed = cJSON_AddArrayToObject(reply, "allowed");
+                for (const auto &h : AllowedServerHostnames())
+                    cJSON_AddItemToArray(allowed, cJSON_CreateString(h.c_str()));
+                ESP_LOGW(TAG, "Provisioning asked for a server that is not allowed: %s", server ? server : "(none)");
+            }
+            if (json)
+                cJSON_Delete(json);
+            char *text = cJSON_PrintUnformatted(reply);
+            cJSON_Delete(reply);
+            if (text == nullptr)
+                return ESP_ERR_NO_MEM;
+            *outlen = strlen(text);
+            *outbuf = reinterpret_cast<uint8_t *>(strdup(text)); // freed by protocomm
+            cJSON_free(text);
+            return *outbuf ? ESP_OK : ESP_ERR_NO_MEM;
+        }
+
         std::string GetBearer()
         {
             std::string bearer;
@@ -610,9 +691,16 @@ namespace GenericESP32Firmware
             wifi_prov_security_t security = WIFI_PROV_SECURITY_1;
             auto datStr = std::to_string(GetDat());
             auto serviceName = GetDeviceServiceName();
+            // Extra endpoint for configuration from the app (which server to use); create before starting.
+            err = wifi_prov_mgr_endpoint_create(PROV_CONFIG_ENDPOINT);
+            Error::Check(err, TAG);
+
             err = wifi_prov_mgr_start_provisioning(security, datStr.c_str(), serviceName.c_str(), datStr.c_str());
             if (Error::Check(err, TAG))
                 return err;
+
+            err = wifi_prov_mgr_endpoint_register(PROV_CONFIG_ENDPOINT, ProvConfigHandler, nullptr);
+            Error::Check(err, TAG);
 
             // Wait until Wi-Fi connection is made.
             xEventGroupWaitBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
@@ -853,6 +941,14 @@ namespace GenericESP32Firmware
         }
     }
 
+    std::string GetServerHostname()
+    {
+        std::string host;
+        if (NVS::Get(NVS_NAMESPACE, "server_host", host) == ESP_OK && !host.empty() && IsAllowedServer(host))
+            return host;
+        return TWOMES_SERVER_HOSTNAME;
+    }
+
     int PostHTTPSToBackend(const std::string &endpoint,
                            HTTPUtil::buffer_t &dataSend,
                            HTTPUtil::headers_t &headersSend,
@@ -860,7 +956,7 @@ namespace GenericESP32Firmware
                            HTTPUtil::headers_t &headersReceive,
                            bool useBearer = false)
     {
-        std::string url = TWOMES_SERVER + endpoint;
+        std::string url = "https://" + GetServerHostname() + endpoint;
 
         esp_http_client_config_t config{};
         config.url = url.c_str();

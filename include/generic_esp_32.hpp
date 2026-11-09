@@ -66,6 +66,12 @@ namespace GenericESP32Firmware
     void BlinkLED(gpio_num_t gpioNum, int amount);
 
     /**
+     * Host name of the server this device uploads to: the one chosen during provisioning (if allowed),
+     * else the one built into the firmware.
+     */
+    std::string GetServerHostname();
+
+    /**
      * Send an HTTPS POST request to the backend API.
      *
      * @param endpoint API endpoint.

@@ -91,6 +91,17 @@ namespace Measurements
 		 */
 		time_t GetTimestamp() const { return m_timestamp; }
 
+		/**
+		 * Compact binary form for the persistent buffer: 8-byte timestamp (little endian), property name,
+		 * a zero byte, the formatted value.
+		 */
+		std::string Serialize() const;
+
+		/**
+		 * Rebuild a measurement from Serialize() output. Returns false for malformed data.
+		 */
+		static bool Deserialize(const uint8_t *data, size_t length, Measurement &out);
+
 	private:
 		/**
 		 * This map holds all the format strings for specific property types.
