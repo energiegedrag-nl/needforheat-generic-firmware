@@ -6,6 +6,9 @@
 #include <vector>
 #include <util/strings.hpp>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #define LGFX_USE_V1
 #include <LovyanGFX.h>
 #include <LGFX_AUTODETECT.hpp>
@@ -79,7 +82,11 @@ public:
 	void DisplayMessage(const std::string &title, const std::vector<std::string> &paragraphs,
 						const std::string &footer);
 
-	/** Overview screen. Repeated calls with the same layout use a fast refresh. */
+	/**
+	 * Overview screen. Repeated calls with the same layout use a fast refresh.
+	 * Skipped while a menu is in use (drawn less than MENU_IDLE_S seconds ago), so a measurement does not
+	 * replace the menu under someone's fingers.
+	 */
 	void DisplayStatus(const Status &status);
 
 	void SetInfoQRDetails(const std::string &payload, int padding, const std::string &text = "");
@@ -100,6 +107,7 @@ public:
 
 private:
 	static constexpr int FAST_REFRESH_LIMIT = 10;
+	static constexpr int MENU_IDLE_S = 120;
 
 	enum class Refresh
 	{
@@ -123,6 +131,7 @@ private:
 	LGFX e_ink_display;
 	LGFX_Sprite m_canvas;
 	int m_fastRefreshes = 0;
+	TickType_t m_lastMenuTick = 0;
 	std::string m_screenKey; // identifies the layout on screen, to choose between a full and a fast refresh
 	std::recursive_mutex m_mutex;
 };

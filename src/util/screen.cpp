@@ -294,6 +294,8 @@ void Screen::DisplayMessage(const std::string &title, const std::vector<std::str
 void Screen::DisplayStatus(const Status &status)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	if (m_screenKey.rfind("menu", 0) == 0 && xTaskGetTickCount() - m_lastMenuTick < pdMS_TO_TICKS(MENU_IDLE_S * 1000))
+		return;
 	Begin();
 
 	// Header: Wi-Fi symbol and clock left, badge (e.g. TEST) right.
@@ -380,6 +382,7 @@ void Screen::DrawMenu(std::vector<std::string> menuLines, int highlightedLine)
 	m_canvas.setTextColor(BLACK, WHITE);
 
 	// Moving the highlight within the same menu: fast refresh.
+	m_lastMenuTick = xTaskGetTickCount();
 	std::string key = "menu";
 	for (const auto &line : menuLines)
 		key += "|" + line;
