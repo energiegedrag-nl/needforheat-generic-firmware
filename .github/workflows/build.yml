@@ -48,3 +48,14 @@ jobs:
           PLATFORMIO_ENV: ${{ matrix.platformio_env }}
           TEST_DIR: ${{ matrix.test_dir }}
         run: pio run -e $PLATFORMIO_ENV -d $TEST_DIR
+
+  # Unit tests that run on the PC (no device needed), e.g. the power-loss tests of the flash log.
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: FlashLog power-loss tests
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/flash_log_test.cpp -o flash_log_test
+          ./flash_log_test
