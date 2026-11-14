@@ -3,11 +3,11 @@ name: Build device firmware
 # instead of the tag each device pins in its platformio.ini. A change here that breaks a device shows up in the PR
 # that makes it, not months later when the device updates its pin. See docs/refactoring-plan.md, step 1.
 #
-# Not blocking yet (continue-on-error): the devices pin older versions (v3.1.0 to v3.4.0-rc.2) and may not build
-# against main. Make it blocking once every device builds.
+# The devices run on the v3 line (release/v3). There a failure blocks: a v3 change may not break a device.
+# On main (v4) it is informative until the devices have moved to v4.
 on:
   push:
-    branches: [ main ]
+    branches: [ main, release/v3 ]
     paths-ignore:
       - '**.md'
   pull_request:
@@ -20,7 +20,7 @@ on:
 jobs:
   device:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: ${{ github.base_ref != 'release/v3' && github.ref != 'refs/heads/release/v3' }}
     strategy:
       fail-fast: false
       matrix:
