@@ -49,6 +49,16 @@ v4 expects the server to be chosen with `CONFIG_NFH_SERVER_HOSTNAME`, `CONFIG_NF
 `CONFIG_NFH_PRODUCTION_SERVER`, while the devices still set the v3 flags (`CONFIG_TWOMES_*`). This is expected (the devices
 are on the v3 line); renaming those flags in each device's `platformio.ini` is the first task of the move to v4.
 
+First result on the v3 line (`release/v3`, #23), which matters more because the devices run on it:
+
+* boiler monitor: builds;
+* living-room module and P1 reader: stop at `#error "No server configured"`: the current v3 head requires
+  `CONFIG_TWOMES_SERVER_HOSTNAME`, `CONFIG_TWOMES_TEST_SERVER` or `CONFIG_TWOMES_PRODUCTION_SERVER`, and these devices
+  set none (they pin older tags that did not require it). Either set a server flag in each device, or give the
+  library a default again; decide before the next v3 release;
+* presence detector: link errors in A2DP (`esp_a2d_sink_init` and others) from `presence_detection.cpp`, the known
+  item "presence detector builds again with generic v3.3.0+" (`TODO.md`).
+
 ### 2. One version for all devices
 
 First on the v3 line: move every device to the latest v3 tag (they pin v3.1.0 to v3.4.0-rc.2). After the heating
