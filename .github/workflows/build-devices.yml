@@ -73,4 +73,5 @@ jobs:
 
       - name: Summary
         if: always()
-        run: echo "${{ matrix.repo }} (${{ matrix.env }}): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "${{ matrix.repo }} (${{ matrix.env }}) - ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
