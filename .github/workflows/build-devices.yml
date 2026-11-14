@@ -1,0 +1,77 @@
+name: Build device firmware
+# Builds every NeedForHeat device firmware against THIS version of the generic firmware (the commit under test),
+# instead of the tag each device pins in its platformio.ini. A change here that breaks a device shows up in the PR
+# that makes it, not months later when the device updates its pin. See docs/refactoring-plan.md, step 1.
+#
+# The devices run on the v3 line (release/v3). There a failure blocks: a v3 change may not break a device.
+# On main (v4) it is informative until the devices have moved to v4.
+on:
+  push:
+    branches: [ main, release/v3 ]
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  device:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ github.base_ref != 'release/v3' && github.ref != 'refs/heads/release/v3' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - repo: needforheat-living-room-module-firmware
+            env: M5STACK_COREINK
+          - repo: needforheat-p1-reader-firmware
+            env: M5STACK_COREINK
+          - repo: needforheat-presence-detector-firmware
+            env: M5STACK_COREINK
+          - repo: needforheat-boiler-monitor-firmware
+            env: M5STACK_COREINK
+    name: ${{ matrix.repo }} (${{ matrix.env }})
+    steps:
+      - name: Checkout generic firmware (this commit)
+        uses: actions/checkout@v7
+        with:
+          path: generic
+
+      - name: Checkout device firmware
+        uses: actions/checkout@v7
+        with:
+          repository: energiegedrag-nl/${{ matrix.repo }}
+          path: device
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+
+      - name: Setup PlatformIO
+        run: pip install platformio
+
+      - name: Use this generic firmware instead of the pinned tag
+        run: |
+          python - <<'PY'
+          import os, re
+          p = "device/platformio.ini"
+          s = open(p, encoding="utf8").read()
+          target = "symlink://" + os.path.join(os.environ["GITHUB_WORKSPACE"], "generic")
+          new, n = re.subn(r"https://github\.com/[^/\s]+/needforheat-generic-firmware(?:\.git)?(?:#\S+)?", target, s)
+          if n == 0:
+              raise SystemExit("no needforheat-generic-firmware entry in lib_deps")
+          open(p, "w", encoding="utf8").write(new)
+          print(f"replaced {n} lib_deps entr{'y' if n == 1 else 'ies'} with {target}")
+          PY
+
+      - name: Build
+        run: pio run -e ${{ matrix.env }} -d device
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "${{ matrix.repo }} (${{ matrix.env }}) - ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
