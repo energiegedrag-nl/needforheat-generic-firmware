@@ -39,6 +39,11 @@ Device repositories keep only their own sensors and protocols (SCD41, P1/DSMR, O
 test (instead of the pinned tag) and builds it. It runs on every pull request, on `main`, weekly and on demand.
 It is not blocking yet, because the devices pin older versions; make it blocking once every device builds.
 
+First result (November 2026): all four devices compile up to `generic_esp_32.cpp` and then stop at the same point:
+v4 expects the server to be chosen with `CONFIG_NFH_SERVER_HOSTNAME`, `CONFIG_NFH_TEST_SERVER` or
+`CONFIG_NFH_PRODUCTION_SERVER`, while the devices still set the v3 flags (`CONFIG_TWOMES_*`). Renaming those flags in
+each device's `platformio.ini` is the first task of step 2.
+
 ### 2. One version for all devices
 
 Move every device to the same, current version of this library, one pull request per device, with the build from
