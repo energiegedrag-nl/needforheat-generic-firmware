@@ -61,3 +61,25 @@ jobs:
           ./flash_log_test
           g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/provisioning_code_test.cpp -o provisioning_code_test
           ./provisioning_code_test
+
+  # Draws every e-ink screen on the PC (LovyanGFX, 1-bit) and keeps the images as a build artifact, to check the
+  # layout at 1:1 and x3 before flashing; see test/host-render/README.md.
+  screen-renders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Render the screens
+        run: |
+          test/host-render/build.sh build/screens
+          pip install pillow
+          python test/host-render/to_png.py build/screens
+      - name: Upload the screens
+        uses: actions/upload-artifact@v4
+        with:
+          name: eink-screens
+          path: build/screens/*.png
