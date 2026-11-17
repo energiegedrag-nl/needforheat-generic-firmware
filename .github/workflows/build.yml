@@ -75,7 +75,7 @@ jobs:
           python-version: "3.12"
       - name: Render the screens
         run: |
-          test/host-render/build.sh build/screens
+          sh test/host-render/build.sh build/screens
           pip install pillow
           python test/host-render/to_png.py build/screens
       - name: Upload the screens

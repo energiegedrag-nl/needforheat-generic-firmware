@@ -16,11 +16,6 @@
 
 namespace
 {
-	constexpr int W = ScreenLayout::W;
-	constexpr int H = ScreenLayout::H;
-	constexpr uint32_t BLACK = ScreenLayout::BLACK;
-	constexpr uint32_t WHITE = ScreenLayout::WHITE;
-
 	constexpr int MARGIN = 5;
 	constexpr int HEADER_H = 22;
 	constexpr int HEADER_BASE = 16;

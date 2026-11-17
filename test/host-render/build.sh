@@ -13,17 +13,22 @@ if [ ! -d "$WORK/LovyanGFX" ]; then
 fi
 L="$WORK/LovyanGFX/src"
 
-# C sources: U8g2 fonts (C on purpose: their string initialisers have no room for a terminating NUL) and the
-# LovyanGFX utilities; then the C++ sources of LovyanGFX (framebuffer platform: no SDL needed) and of this repo.
+# LovyanGFX (framebuffer platform: no SDL needed) and the U8g2 fonts, without warnings: not our code. The fonts are
+# C on purpose: their string initialisers have no room for a terminating NUL.
 OBJS=""
-for c in src/util/fonts/u8g2_fonts.c "$L"/lgfx/utility/*.c "$L"/lgfx/Fonts/efont/*.c "$L"/lgfx/Fonts/IPA/*.c; do
-	o="$WORK/$(echo "$c" | tr '/' '_').o"
-	${CC:-gcc} -O1 -c -I include -isystem "$L" "$c" -o "$o"
+for f in src/util/fonts/u8g2_fonts.c "$L"/lgfx/utility/*.c "$L"/lgfx/Fonts/efont/*.c "$L"/lgfx/Fonts/IPA/*.c 	"$L"/lgfx/v1/*.cpp "$L"/lgfx/v1/misc/*.cpp "$L"/lgfx/v1/panel/Panel_Device.cpp "$L"/lgfx/v1/platforms/framebuffer/*.cpp; do
+	o="$WORK/obj/$(echo "$f" | tr '/' '_').o"
+	if [ ! -f "$o" ]; then
+		mkdir -p "$WORK/obj"
+		case "$f" in
+		*.c) ${CC:-gcc} -O1 -w -I include -isystem "$L" -c "$f" -o "$o" ;;
+		*) ${CXX:-g++} -std=c++17 -O1 -w -isystem "$L" -DLGFX_LINUX_FB -c "$f" -o "$o" ;;
+		esac
+	fi
 	OBJS="$OBJS $o"
 done
-${CXX:-g++} -std=c++17 -O1 -Wall -Wextra -I include -isystem "$L" -DLGFX_LINUX_FB \
-	test/host-render/render_screens.cpp src/util/screen_layout.cpp \
-	"$L"/lgfx/v1/*.cpp "$L"/lgfx/v1/misc/*.cpp "$L"/lgfx/v1/panel/Panel_Device.cpp \
-	"$L"/lgfx/v1/platforms/framebuffer/*.cpp $OBJS -lpthread -o "$WORK/render_screens"
+
+# This repo's code, with warnings as errors.
+${CXX:-g++} -std=c++17 -O1 -Wall -Wextra -Werror -I include -isystem "$L" -DLGFX_LINUX_FB 	test/host-render/render_screens.cpp src/util/screen_layout.cpp $OBJS -lpthread -o "$WORK/render_screens"
 
 "$WORK/render_screens" "$OUT"
