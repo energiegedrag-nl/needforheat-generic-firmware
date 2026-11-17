@@ -2,7 +2,9 @@
 
 #include <algorithm>
 
+#ifdef SCREEN_LAYOUT_FONT_COMPARISON
 #include <util/fonts/u8g2_fonts.hpp>
+#endif
 
 /*
  * Layout on the 200x200 panel; y values of text are baselines.
@@ -35,6 +37,7 @@ namespace
 	constexpr int PROVISIONING_QR_QUIET = 16;  // 4 modules of white between the header bar and the QR code
 	constexpr int PROVISIONING_NAME_BASE = 167;
 
+#ifdef SCREEN_LAYOUT_FONT_COMPARISON
 	const lgfx::U8g2font HELV_B14(u8g2_font_helvB14_tf);
 	const lgfx::U8g2font HELV_B18(u8g2_font_helvB18_tf);
 	const lgfx::U8g2font HELV_B24(u8g2_font_helvB24_tf);
@@ -43,6 +46,7 @@ namespace
 	const lgfx::U8g2font NCEN_B24(u8g2_font_ncenB24_tf);
 	const lgfx::U8g2font FUB42(u8g2_font_fub42_tn);
 	const lgfx::U8g2font FUB49(u8g2_font_fub49_tn);
+#endif
 
 	bool IsNumber(const std::string &text)
 	{
@@ -59,8 +63,10 @@ const std::vector<ScreenLayout::FontSet> &ScreenLayout::FontSets()
 	static const std::vector<FontSet> sets = {
 		{"FreeSans Bold", &fonts::FreeSansBold9pt7b, &fonts::FreeSansBold12pt7b, &fonts::FreeSansBold18pt7b,
 		 &fonts::FreeSansBold24pt7b, &fonts::FreeSansBold24pt7b},
+#ifdef SCREEN_LAYOUT_FONT_COMPARISON // only in the host renderer: these fonts do not fit in the app partition
 		{"Helvetica Bold + FreeUniversal 49", &HELV_B14, &HELV_B18, &HELV_B24, &HELV_B24, &FUB49},
 		{"New Century Schoolbook Bold + FreeUniversal 42", &NCEN_B14, &NCEN_B18, &NCEN_B24, &NCEN_B24, &FUB42},
+#endif
 	};
 	return sets;
 }
