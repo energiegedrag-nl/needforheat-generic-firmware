@@ -49,16 +49,17 @@ jobs:
         env:
           PLATFORMIO_ENV: ${{ matrix.platformio_env }}
           TEST_DIR: ${{ matrix.test_dir }}
-          # A linker map, to see what takes the flash (the CoreInk app partition is nearly full).
-          PLATFORMIO_BUILD_FLAGS: -Wl,-Map=firmware.map
         run: pio run -e $PLATFORMIO_ENV -d $TEST_DIR
 
+      # The linker map shows what takes the flash (the CoreInk app partition is nearly full).
       - name: Upload the linker map
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: firmware-map-${{ matrix.platformio_env }}
-          path: ${{ matrix.test_dir }}/**/firmware.map
+          # ESP-IDF writes it next to firmware.elf; the .pio folder is hidden.
+          path: ${{ matrix.test_dir }}/.pio/build/${{ matrix.platformio_env }}/firmware.map
+          include-hidden-files: true
           if-no-files-found: ignore
 
   # Unit tests that run on the PC (no device needed), e.g. the power-loss tests of the flash log.
