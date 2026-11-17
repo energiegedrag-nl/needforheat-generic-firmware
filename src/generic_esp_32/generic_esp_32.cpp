@@ -158,8 +158,9 @@ namespace GenericESP32Firmware
                 {stage == 0 ? S::Active : stage == 1 ? S::Failed : S::Done, "Wifi: " + ssid},
                 {stage == 2 ? S::Active : S::Todo, "Activeren"},
             };
-            const char *message = stage == 0 ? "Verbinden met wifi... dit kan tot 30 seconden duren."
-                                : stage == 1 ? "Wifi lukt niet: klopt het wachtwoord, en is het een 2,4 GHz-netwerk? De module begint opnieuw."
+            // Short texts: the screen fits about 20 characters per line in a readable size.
+            const char *message = stage == 0 ? "Verbinden met wifi (tot 30 s)..."
+                                : stage == 1 ? "Klopt het wachtwoord? Is het 2,4 GHz? De module begint opnieuw."
                                              : "Aanmelden bij de server...";
             s_screen.DisplaySteps("Koppelen", stage == 2 ? "stap 3 van 3" : "stap 2 van 3", steps, message,
                                   stage == 1 ? "" : "Houd de app open");
@@ -904,9 +905,9 @@ namespace GenericESP32Firmware
             ESP_LOGE(TAG, "Device activation failed; restarting in 60 s to try again.");
 #ifdef M5STACK_COREINK
             s_screen.DisplayMessage("Activeren lukt niet",
-                                    {s_lastActivationStatus <= 0 ? "De server is niet bereikbaar. Over 60 seconden probeert de module het opnieuw."
-                                                                 : "De server weigert de module. Over 60 seconden probeert de module het opnieuw.",
-                                     "Blijft het mislukken? Reset de wifi met de knop en koppel opnieuw met de app."},
+                                    {s_lastActivationStatus <= 0 ? "Server niet bereikbaar. Nieuwe poging over 60 s."
+                                                                 : "Server weigert de module. Nieuwe poging over 60 s.",
+                                     "Blijft het mislukken? Reset de wifi (knop) en koppel opnieuw."},
                                     "code " + std::to_string(s_lastActivationStatus) + "  " + GetServerHostname());
 #endif // M5STACK_COREINK
             vTaskDelay(Delay::Seconds(60));
@@ -1031,7 +1032,19 @@ namespace GenericESP32Firmware
         if (status.footerLeft.empty())
         {
             auto pending = SecureUpload::PersistentStore::GetInstance().Pending();
-            status.footerLeft = pending == 0 ? std::string("alles verstuurd") : std::to_string(pending) + " metingen wachten";
+            time_t lastUpload = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
+            if (pending > 0)
+                status.footerLeft = std::to_string(pending) + " wachten";
+            else if (lastUpload > 0)
+            {
+                struct tm local;
+                localtime_r(&lastUpload, &local);
+                char text[8];
+                strftime(text, sizeof(text), "%H:%M", &local);
+                status.footerLeft = std::string("verstuurd ") + text;
+            }
+            else
+                status.footerLeft = "alles verstuurd";
         }
         s_screen.DisplayStatus(status);
     }

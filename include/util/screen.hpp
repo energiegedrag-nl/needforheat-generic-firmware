@@ -13,6 +13,8 @@
 #include <LovyanGFX.h>
 #include <LGFX_AUTODETECT.hpp>
 
+#include <util/screen_layout.hpp>
+
 /**
  * E-ink screen of the M5Stack CoreInk (200x200, black and white).
  *
@@ -24,32 +26,10 @@
 class Screen
 {
 public:
-	/** One line of a progress screen (e.g. provisioning). */
-	enum class StepState
-	{
-		Todo,
-		Active,
-		Done,
-		Failed
-	};
-	struct Step
-	{
-		StepState state;
-		std::string label;
-	};
-
-	/** Overview screen of a device: one big value, up to three tiles, status in header and footer. */
-	struct Status
-	{
-		std::string clock;										// e.g. "14:20"; empty: not shown
-		bool wifiConnected = true;
-		std::string badge;										// e.g. "TEST" for a test server; empty: none
-		std::string bigLabel;									// e.g. "CO2 ppm"
-		std::string bigValue;									// e.g. "612"
-		std::vector<std::pair<std::string, std::string>> tiles; // label, value (at most 3)
-		std::string footerLeft;									// e.g. "sent 14:10, 0 waiting"
-		std::string footerRight;
-	};
+	// The screens themselves are drawn by ScreenLayout (also used by the host renderer in test/host-render).
+	using StepState = ScreenLayout::StepState;
+	using Step = ScreenLayout::Step;
+	using Status = ScreenLayout::Status;
 
 	/** The one screen object of the device (one panel, one buffer, one refresh state); created on first use. */
 	static Screen &Instance();
@@ -102,7 +82,10 @@ public:
 	 */
 	void DrawMenu(std::vector<std::string> lines, int highlightedLine);
 
-	/** Wait until the panel has finished refreshing and put it to sleep; call before cutting power. */
+	/**
+	 * Wait until the panel has finished refreshing and put it to sleep; call before cutting power, so the image
+	 * stays sharp. If the power stays on (e.g. on USB), the next screen wakes the panel up again.
+	 */
 	void PrepareForPowerOff();
 
 private:
@@ -115,13 +98,7 @@ private:
 		Fast
 	};
 
-	void Begin();
-	void Header(const std::string &left, const std::string &right, bool rightInverted = false);
-	void Footer(const std::string &left, const std::string &right);
 	void Push(const std::string &screenKey);
-	std::string Fit(const std::string &text, int maxWidth);
-	int WrapText(const std::string &text, int x, int y, int maxWidth, int lineHeight);
-	void DrawQR(const std::string &payload, int x, int y, int maxSize);
 
 	// Storage for Info QR.
 	static std::string s_infoURL;
@@ -130,6 +107,7 @@ private:
 
 	LGFX e_ink_display;
 	LGFX_Sprite m_canvas;
+	bool m_asleep = false; // panel put to sleep by PrepareForPowerOff(); woken up by the next Push()
 	int m_fastRefreshes = 0;
 	TickType_t m_lastMenuTick = 0;
 	std::string m_screenKey; // identifies the layout on screen, to choose between a full and a fast refresh
