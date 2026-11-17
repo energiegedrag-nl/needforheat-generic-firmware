@@ -2,9 +2,7 @@
 
 #include <algorithm>
 
-#ifdef SCREEN_LAYOUT_FONT_COMPARISON
 #include <util/fonts/u8g2_fonts.hpp>
-#endif
 
 /*
  * Layout on the 200x200 panel; y values of text are baselines.
@@ -23,8 +21,8 @@ namespace
 	constexpr int HEADER_BASE = 16;
 	constexpr int FOOTER_LINE = 175;
 	constexpr int FOOTER_BASE = 194;
-	constexpr int TEXT_CAP = 13;	 // cap height of the text fonts
-	constexpr int LINE_HEIGHT = 17;	 // line distance of wrapped text
+	constexpr int TEXT_CAP = 14;	 // cap height of the text font
+	constexpr int LINE_HEIGHT = 18;	 // line distance of wrapped text
 	constexpr int ROW_H = 26;		 // rows of steps and menus
 
 	constexpr int STATUS_LABEL_BASE = 39;
@@ -37,15 +35,15 @@ namespace
 	constexpr int PROVISIONING_QR_QUIET = 16;  // 4 modules of white between the header bar and the QR code
 	constexpr int PROVISIONING_NAME_BASE = 167;
 
-#ifdef SCREEN_LAYOUT_FONT_COMPARISON
 	const lgfx::U8g2font HELV_B14(u8g2_font_helvB14_tf);
 	const lgfx::U8g2font HELV_B18(u8g2_font_helvB18_tf);
 	const lgfx::U8g2font HELV_B24(u8g2_font_helvB24_tf);
+	const lgfx::U8g2font FUB49(u8g2_font_fub49_tn);
+#ifdef SCREEN_LAYOUT_FONT_COMPARISON
 	const lgfx::U8g2font NCEN_B14(u8g2_font_ncenB14_tf);
 	const lgfx::U8g2font NCEN_B18(u8g2_font_ncenB18_tf);
 	const lgfx::U8g2font NCEN_B24(u8g2_font_ncenB24_tf);
 	const lgfx::U8g2font FUB42(u8g2_font_fub42_tn);
-	const lgfx::U8g2font FUB49(u8g2_font_fub49_tn);
 #endif
 
 	bool IsNumber(const std::string &text)
@@ -58,13 +56,15 @@ namespace
 
 const std::vector<ScreenLayout::FontSet> &ScreenLayout::FontSets()
 {
-	// Adafruit FreeFonts are rasterised at 141 dpi: 9 pt is about 17.6 px, cap height about 13 px. They only
-	// have ASCII (no ³ or °). The U8g2 fonts are drawn for pixels and have Latin-1.
+	// U8g2 fonts are drawn for pixels (clean at 1 bit per pixel) and have Latin-1 (° ² ³). fub49 has only digits and
+	// . , : - +, so a main value that is not a number uses helvB24. The other sets are only built for the host
+	// renderer (SCREEN_LAYOUT_FONT_COMPARISON): with them the firmware does not fit in the app partition.
+	// Adafruit FreeFonts are rasterised at 141 dpi (9 pt is about 17.6 px) and only have ASCII.
 	static const std::vector<FontSet> sets = {
+		{"Helvetica Bold + FreeUniversal 49", &HELV_B14, &HELV_B18, &HELV_B24, &HELV_B24, &FUB49},
+#ifdef SCREEN_LAYOUT_FONT_COMPARISON
 		{"FreeSans Bold", &fonts::FreeSansBold9pt7b, &fonts::FreeSansBold12pt7b, &fonts::FreeSansBold18pt7b,
 		 &fonts::FreeSansBold24pt7b, &fonts::FreeSansBold24pt7b},
-#ifdef SCREEN_LAYOUT_FONT_COMPARISON // only in the host renderer: these fonts do not fit in the app partition
-		{"Helvetica Bold + FreeUniversal 49", &HELV_B14, &HELV_B18, &HELV_B24, &HELV_B24, &FUB49},
 		{"New Century Schoolbook Bold + FreeUniversal 42", &NCEN_B14, &NCEN_B18, &NCEN_B24, &NCEN_B24, &FUB42},
 #endif
 	};
@@ -81,7 +81,9 @@ ScreenLayout::ScreenLayout(LGFX_Sprite &canvas, const FontSet &fonts) : m_canvas
 void ScreenLayout::Begin()
 {
 	m_canvas.fillScreen(WHITE);
-	m_canvas.setTextColor(BLACK, WHITE);
+	// Text is drawn without a background: rows and bars fill their own background first, and a background box per
+	// line would erase the descenders of the line above.
+	m_canvas.setTextColor(BLACK);
 	m_canvas.setTextSize(1);
 	m_canvas.setTextWrap(false);
 	m_canvas.setFont(m_fonts.text);
@@ -163,39 +165,37 @@ void ScreenLayout::Header(const std::string &left, const std::string &right, int
 {
 	m_canvas.fillRect(0, 0, W, HEADER_H, BLACK);
 	m_canvas.setFont(m_fonts.text);
-	m_canvas.setTextColor(WHITE, BLACK);
+	m_canvas.setTextColor(WHITE);
+	constexpr int GAP = 8;
 
-	int rightWidth = 0;
-	if (!right.empty())
-	{
-		std::string fitted = Fit(right, W / 2 - MARGIN);
-		rightWidth = m_canvas.textWidth(fitted.c_str()) + 6;
-		m_canvas.setTextDatum(textdatum_t::baseline_right);
-		m_canvas.drawString(fitted.c_str(), W - MARGIN, HEADER_BASE);
-	}
-
-	int leftX = MARGIN + leftIndent;
-	int leftEnd = W - MARGIN - rightWidth;
-	if (!badge.empty())
-	{
-		// Badge (e.g. TEST) in a white box in the middle.
-		std::string fitted = Fit(badge, 70);
-		int boxW = m_canvas.textWidth(fitted.c_str()) + 10;
-		int boxX = (W - boxW) / 2;
-		m_canvas.fillRect(boxX, 3, boxW, HEADER_H - 6, WHITE);
-		m_canvas.setTextColor(BLACK, WHITE);
-		m_canvas.setTextDatum(textdatum_t::baseline_center);
-		m_canvas.drawString(fitted.c_str(), W / 2, HEADER_BASE);
-		m_canvas.setTextColor(WHITE, BLACK);
-		leftEnd = boxX - 4;
-	}
-
+	// Left text first (it matters most), the right text gets the rest of the bar, the badge sits after the left text.
+	int x = MARGIN + leftIndent;
+	int rightNeeds = right.empty() ? 0 : std::min(m_canvas.textWidth(right.c_str()), W / 2) + GAP;
 	if (!left.empty())
 	{
+		std::string fitted = Fit(left, W - MARGIN - x - rightNeeds);
 		m_canvas.setTextDatum(textdatum_t::baseline_left);
-		m_canvas.drawString(Fit(left, leftEnd - leftX).c_str(), leftX, HEADER_BASE);
+		m_canvas.drawString(fitted.c_str(), x, HEADER_BASE);
+		x += m_canvas.textWidth(fitted.c_str()) + GAP;
 	}
-	m_canvas.setTextColor(BLACK, WHITE);
+	if (!badge.empty())
+	{
+		// Badge (e.g. TEST) in a white box.
+		std::string fitted = Fit(badge, W - MARGIN - x - rightNeeds - 10);
+		int boxW = m_canvas.textWidth(fitted.c_str()) + 10;
+		m_canvas.fillRect(x, 3, boxW, HEADER_H - 6, WHITE);
+		m_canvas.setTextColor(BLACK);
+		m_canvas.setTextDatum(textdatum_t::baseline_left);
+		m_canvas.drawString(fitted.c_str(), x + 5, HEADER_BASE);
+		m_canvas.setTextColor(WHITE);
+		x += boxW + GAP;
+	}
+	if (!right.empty())
+	{
+		m_canvas.setTextDatum(textdatum_t::baseline_right);
+		m_canvas.drawString(Fit(right, W - MARGIN - x).c_str(), W - MARGIN, HEADER_BASE);
+	}
+	m_canvas.setTextColor(BLACK);
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
 }
 
@@ -205,7 +205,7 @@ int ScreenLayout::Footer(const std::string &left, const std::string &right)
 		return H;
 	m_canvas.fillRect(0, FOOTER_LINE, W, 2, BLACK);
 	m_canvas.setFont(m_fonts.text);
-	m_canvas.setTextColor(BLACK, WHITE);
+	m_canvas.setTextColor(BLACK);
 	int rightWidth = 0;
 	if (!right.empty())
 	{
@@ -247,7 +247,7 @@ std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const s
 											 const std::string &footerLeft, const std::string &footerRight)
 {
 	Begin();
-	Header("Koppelen", "scan in de app");
+	Header("Koppelen", "scan in app");
 	// A QR code needs 4 modules of white around it: the header bar above it counts as black.
 	m_canvas.qrcode(payload.c_str(), (W - PROVISIONING_QR_SIZE) / 2, HEADER_H + PROVISIONING_QR_QUIET,
 					PROVISIONING_QR_SIZE);
@@ -301,14 +301,14 @@ std::string ScreenLayout::DrawSteps(const std::string &title, const std::string 
 		default:
 			break;
 		}
-		m_canvas.setTextColor(fg, bg);
+		m_canvas.setTextColor(fg);
 		m_canvas.setTextDatum(textdatum_t::baseline_left);
 		int tx = bx + bs + 7;
 		m_canvas.drawString(Fit(step.label, W - tx - MARGIN).c_str(), tx, y + (ROW_H + TEXT_CAP) / 2);
 		m_canvas.drawFastHLine(0, y + ROW_H - 1, W, BLACK);
 		y += ROW_H;
 	}
-	m_canvas.setTextColor(BLACK, WHITE);
+	m_canvas.setTextColor(BLACK);
 	if (!message.empty())
 		WrapText(message, MARGIN, y + 5 + TEXT_CAP, W - 2 * MARGIN, LINE_HEIGHT, bottom - 4);
 	// Steps advance one at a time: a fast refresh while the title stays the same.
@@ -366,11 +366,16 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			int tx = static_cast<int>(i) * tileW;
 			if (i > 0)
 				m_canvas.fillRect(tx - 1, STATUS_TILES_LINE, 2, bottom - STATUS_TILES_LINE, BLACK);
-			int textX = tx + MARGIN;
-			int maxW = tileW - MARGIN - 3;
+			int textX = tx + (i > 0 ? 4 : MARGIN);
+			int maxW = tx + tileW - textX - 2;
 			m_canvas.setFont(m_fonts.text);
 			m_canvas.drawString(Fit(status.tiles[i].first, maxW).c_str(), textX, STATUS_TILE_LABEL_BASE);
-			m_canvas.setFont(m_fonts.value);
+			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})
+			{
+				m_canvas.setFont(font);
+				if (m_canvas.textWidth(status.tiles[i].second.c_str()) <= maxW)
+					break;
+			}
 			m_canvas.drawString(Fit(status.tiles[i].second, maxW).c_str(), textX, STATUS_TILE_VALUE_BASE);
 		}
 	}
@@ -403,14 +408,14 @@ std::string ScreenLayout::DrawMenu(const std::vector<std::string> &lines, int hi
 		uint32_t fg = highlighted ? WHITE : BLACK;
 		uint32_t bg = highlighted ? BLACK : WHITE;
 		m_canvas.fillRect(0, y, W, rowH, bg);
-		m_canvas.setTextColor(fg, bg);
+		m_canvas.setTextColor(fg);
 		m_canvas.setTextDatum(textdatum_t::baseline_left);
 		std::string label = (highlighted ? "> " : "") + lines[i];
 		m_canvas.drawString(Fit(label, W - 2 * MARGIN).c_str(), MARGIN, y + (rowH + TEXT_CAP) / 2);
 		m_canvas.drawFastHLine(0, y + rowH - 1, W, BLACK);
 		y += rowH;
 	}
-	m_canvas.setTextColor(BLACK, WHITE);
+	m_canvas.setTextColor(BLACK);
 
 	// Moving the highlight within the same menu: fast refresh.
 	std::string key = "menu";
