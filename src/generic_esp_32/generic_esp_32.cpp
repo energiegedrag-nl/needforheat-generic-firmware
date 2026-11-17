@@ -162,7 +162,7 @@ namespace GenericESP32Firmware
             const char *message = stage == 0 ? "Verbinden met wifi (tot 30 s)..."
                                 : stage == 1 ? "Klopt het wachtwoord? Is het 2,4 GHz? De module begint opnieuw."
                                              : "Aanmelden bij de server...";
-            s_screen.DisplaySteps("Koppelen", stage == 2 ? "stap 3 van 3" : "stap 2 van 3", steps, message,
+            s_screen.DisplaySteps("Koppelen", stage == 2 ? "3 van 3" : "2 van 3", steps, message,
                                   stage == 1 ? "" : "Houd de app open");
         }
 #endif // M5STACK_COREINK

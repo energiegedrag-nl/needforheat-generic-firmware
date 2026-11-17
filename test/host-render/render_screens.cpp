@@ -29,19 +29,34 @@ namespace
 		};
 	}
 
+	ScreenLayout::Status Big(const char *label, const char *value, const char *unit)
+	{
+		ScreenLayout::Status s;
+		s.clock = "14:20";
+		s.badge = "TEST";
+		s.device = "P1";
+		s.bigLabel = label;
+		s.bigValue = value;
+		s.bigUnit = unit;
+		s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
+		s.footerLeft = "verstuurd 14:10";
+		s.footerRight = "info";
+		return s;
+	}
+
 	const std::vector<Sample> &Samples()
 	{
 		static const std::vector<Sample> samples = {
 			{"01-provisioning-qr", [](ScreenLayout &l)
 			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "living room", "v3.5.0"); }},
 			{"02-steps-wifi", [](ScreenLayout &l)
-			 { l.DrawSteps("Koppelen", "stap 2 van 3", ProvisioningSteps(0), "Verbinden met wifi (tot 30 s)...",
+			 { l.DrawSteps("Koppelen", "2 van 3", ProvisioningSteps(0), "Verbinden met wifi (tot 30 s)...",
 						   "Houd de app open"); }},
 			{"03-steps-wifi-failed", [](ScreenLayout &l)
-			 { l.DrawSteps("Koppelen", "stap 2 van 3", ProvisioningSteps(1),
+			 { l.DrawSteps("Koppelen", "2 van 3", ProvisioningSteps(1),
 						   "Klopt het wachtwoord? Is het 2,4 GHz? De module begint opnieuw.", ""); }},
 			{"04-steps-activating", [](ScreenLayout &l)
-			 { l.DrawSteps("Koppelen", "stap 3 van 3", ProvisioningSteps(2), "Aanmelden bij de server...",
+			 { l.DrawSteps("Koppelen", "3 van 3", ProvisioningSteps(2), "Aanmelden bij de server...",
 						   "Houd de app open"); }},
 			{"05-activation-failed", [](ScreenLayout &l)
 			 { l.DrawMessage("Activeren lukt niet",
@@ -56,9 +71,10 @@ namespace
 				 s.clock = "14:20";
 				 s.badge = "TEST";
 				 s.device = "WK";
-				 s.bigLabel = "CO2 ppm";
+				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
-				 s.tiles = {{"temp °C", "20,5"}, {"RV %", "48"}, {"pers.", "2"}};
+				 s.bigUnit = "ppm";
+				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}, {"pers.", "2"}};
 				 s.footerLeft = "verstuurd 14:10";
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
@@ -69,8 +85,9 @@ namespace
 				 s.clock = "14:20";
 				 s.badge = "TEST";
 				 s.device = "P1";
-				 s.bigLabel = "stroom kW";
+				 s.bigLabel = "stroom";
 				 s.bigValue = "0,42";
+				 s.bigUnit = "kW";
 				 s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
 				 s.footerLeft = "verstuurd 14:10";
 				 s.footerRight = "info";
@@ -82,8 +99,9 @@ namespace
 				 s.clock = "03:05";
 				 s.wifiConnected = false;
 				 s.device = "P1";
-				 s.bigLabel = "stroom kW";
+				 s.bigLabel = "stroom";
 				 s.bigValue = "-1,85";
+				 s.bigUnit = "kW";
 				 s.tiles = {{"gas m³", "0,0"}, {"DSMR", "5.0"}};
 				 s.footerLeft = "128 wachten";
 				 s.footerRight = "info";
@@ -95,6 +113,17 @@ namespace
 							 "Galaxy A54", "Fairphone 5", "terug"},
 							6);
 			 }},
+			// The widest values that occur at home: they must fit with their unit.
+			{"11-status-co2-high", [](ScreenLayout &l)
+			 { l.DrawStatus(Big("CO₂", "1850", "ppm")); }},
+			{"12-status-power-export", [](ScreenLayout &l)
+			 { l.DrawStatus(Big("stroom", "-12,4", "kW")); }},
+			{"13-status-power-high", [](ScreenLayout &l)
+			 { l.DrawStatus(Big("stroom", "17,3", "kW")); }},
+			{"14-status-temperature", [](ScreenLayout &l)
+			 { l.DrawStatus(Big("binnen", "21,5", "°C")); }},
+			{"15-status-gas-rate", [](ScreenLayout &l)
+			 { l.DrawStatus(Big("gas", "1,25", "m³/h")); }},
 		};
 		return samples;
 	}

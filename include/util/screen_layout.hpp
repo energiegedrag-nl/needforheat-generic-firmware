@@ -48,9 +48,10 @@ public:
 		bool wifiConnected = true;
 		std::string badge;										// e.g. "TEST" for a test server; empty: none
 		std::string device;										// short device label in the header, e.g. "P1"
-		std::string bigLabel;									// e.g. "CO2 ppm"
+		std::string bigLabel;									// e.g. "CO₂" (subscript digits allowed)
 		std::string bigValue;									// e.g. "612"
-		std::vector<std::pair<std::string, std::string>> tiles; // label, value (at most 3)
+		std::string bigUnit;									// e.g. "ppm": smaller, right after the value
+		std::vector<std::pair<std::string, std::string>> tiles; // label (subscript digits allowed), value (at most 3)
 		std::string footerLeft;									// e.g. "verstuurd 14:10"
 		std::string footerRight;								// e.g. "info"
 	};
@@ -64,6 +65,7 @@ public:
 		const lgfx::IFont *value;	  // tile values
 		const lgfx::IFont *bigText;	  // main value when it is not a number
 		const lgfx::IFont *bigNumber; // main value when it is a number (digits . , : - +)
+		const lgfx::IFont *bigNumber2; // the same, narrower: when the value and unit do not fit with bigNumber
 	};
 
 	/** The font sets that can be compared; the first is the one in use (see Fonts()). */
@@ -95,6 +97,12 @@ private:
 	int Footer(const std::string &left, const std::string &right);
 	void WifiSymbol(int x, int y, bool connected, uint32_t colour);
 	std::string Fit(const std::string &text, int maxWidth);
+	/**
+	 * Draws a label left-aligned on a baseline with subscript digits (U+2080..U+2089, e.g. "CO₂") in a smaller font
+	 * below the baseline; shortened like Fit() when it is too wide. Uses the current font for the other text.
+	 */
+	void DrawLabel(const std::string &text, int x, int y, int maxWidth);
+	int LabelWidth(const std::string &text);
 	int WrapText(const std::string &text, int x, int y, int maxWidth, int lineHeight, int maxY);
 
 	LGFX_Sprite &m_canvas;

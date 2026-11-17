@@ -9,6 +9,7 @@ extern "C"
 {
 #endif
 
+	extern const uint8_t u8g2_font_helvB10_tn[239];
 	extern const uint8_t u8g2_font_helvB14_tf[3681];
 	extern const uint8_t u8g2_font_helvB18_tf[4949];
 	extern const uint8_t u8g2_font_helvB24_tf[6566];

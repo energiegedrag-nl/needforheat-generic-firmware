@@ -39,12 +39,43 @@ namespace
 	const lgfx::U8g2font HELV_B18(u8g2_font_helvB18_tf);
 	const lgfx::U8g2font HELV_B24(u8g2_font_helvB24_tf);
 	const lgfx::U8g2font FUB49(u8g2_font_fub49_tn);
+	const lgfx::U8g2font FUB42(u8g2_font_fub42_tn);
+	const lgfx::U8g2font SUBSCRIPT(u8g2_font_helvB10_tn); // digits only, for "CO₂" in labels
+	constexpr int SUBSCRIPT_DROP = 4;					  // baseline of a subscript below the text baseline
 #ifdef SCREEN_LAYOUT_FONT_COMPARISON
 	const lgfx::U8g2font NCEN_B14(u8g2_font_ncenB14_tf);
 	const lgfx::U8g2font NCEN_B18(u8g2_font_ncenB18_tf);
 	const lgfx::U8g2font NCEN_B24(u8g2_font_ncenB24_tf);
-	const lgfx::U8g2font FUB42(u8g2_font_fub42_tn);
 #endif
+
+	/** Length of the UTF-8 subscript digit (U+2080..U+2089: E2 82 80..89) at pos, or 0. */
+	size_t SubscriptAt(const std::string &text, size_t pos)
+	{
+		return pos + 2 < text.size() && static_cast<unsigned char>(text[pos]) == 0xE2 &&
+					   static_cast<unsigned char>(text[pos + 1]) == 0x82 &&
+					   static_cast<unsigned char>(text[pos + 2]) >= 0x80 && static_cast<unsigned char>(text[pos + 2]) <= 0x89
+				   ? 3
+				   : 0;
+	}
+
+	/** The text with subscript digits as normal digits. */
+	std::string WithoutSubscripts(const std::string &text)
+	{
+		std::string plain;
+		for (size_t i = 0; i < text.size(); i++)
+		{
+			if (SubscriptAt(text, i) > 0)
+			{
+				plain += static_cast<char>('0' + (static_cast<unsigned char>(text[i + 2]) - 0x80));
+				i += 2;
+			}
+			else
+			{
+				plain += text[i];
+			}
+		}
+		return plain;
+	}
 
 	bool IsNumber(const std::string &text)
 	{
@@ -61,11 +92,11 @@ const std::vector<ScreenLayout::FontSet> &ScreenLayout::FontSets()
 	// renderer (SCREEN_LAYOUT_FONT_COMPARISON): with them the firmware does not fit in the app partition.
 	// Adafruit FreeFonts are rasterised at 141 dpi (9 pt is about 17.6 px) and only have ASCII.
 	static const std::vector<FontSet> sets = {
-		{"Helvetica Bold + FreeUniversal 49", &HELV_B14, &HELV_B18, &HELV_B24, &HELV_B24, &FUB49},
+		{"Helvetica Bold + FreeUniversal 49", &HELV_B14, &HELV_B18, &HELV_B24, &HELV_B24, &FUB49, &FUB42},
 #ifdef SCREEN_LAYOUT_FONT_COMPARISON
 		{"FreeSans Bold", &fonts::FreeSansBold9pt7b, &fonts::FreeSansBold12pt7b, &fonts::FreeSansBold18pt7b,
-		 &fonts::FreeSansBold24pt7b, &fonts::FreeSansBold24pt7b},
-		{"New Century Schoolbook Bold + FreeUniversal 42", &NCEN_B14, &NCEN_B18, &NCEN_B24, &NCEN_B24, &FUB42},
+		 &fonts::FreeSansBold24pt7b, &fonts::FreeSansBold24pt7b, &fonts::FreeSansBold24pt7b},
+		{"New Century Schoolbook Bold + FreeUniversal 42", &NCEN_B14, &NCEN_B18, &NCEN_B24, &NCEN_B24, &FUB42, &FUB42},
 #endif
 	};
 	return sets;
@@ -105,6 +136,68 @@ std::string ScreenLayout::Fit(const std::string &text, int maxWidth)
 			shortened.pop_back();
 	}
 	return shortened + "..";
+}
+
+int ScreenLayout::LabelWidth(const std::string &text)
+{
+	const lgfx::IFont *font = m_canvas.getFont();
+	int width = 0;
+	std::string run;
+	for (size_t i = 0; i < text.size(); i++)
+	{
+		if (SubscriptAt(text, i) > 0)
+		{
+			width += m_canvas.textWidth(run.c_str());
+			run.clear();
+			char digit[2] = {static_cast<char>('0' + (static_cast<unsigned char>(text[i + 2]) - 0x80)), 0};
+			m_canvas.setFont(&SUBSCRIPT);
+			width += m_canvas.textWidth(digit) + 1;
+			m_canvas.setFont(font);
+			i += 2;
+		}
+		else
+		{
+			run += text[i];
+		}
+	}
+	return width + m_canvas.textWidth(run.c_str());
+}
+
+void ScreenLayout::DrawLabel(const std::string &text, int x, int y, int maxWidth)
+{
+	m_canvas.setTextDatum(textdatum_t::baseline_left);
+	if (LabelWidth(text) > maxWidth)
+	{
+		// Too wide: shorten it as plain text ("CO2..").
+		m_canvas.drawString(Fit(WithoutSubscripts(text), maxWidth).c_str(), x, y);
+		return;
+	}
+	const lgfx::IFont *font = m_canvas.getFont();
+	std::string run;
+	auto flush = [&]()
+	{
+		m_canvas.drawString(run.c_str(), x, y);
+		x += m_canvas.textWidth(run.c_str());
+		run.clear();
+	};
+	for (size_t i = 0; i < text.size(); i++)
+	{
+		if (SubscriptAt(text, i) > 0)
+		{
+			flush();
+			char digit[2] = {static_cast<char>('0' + (static_cast<unsigned char>(text[i + 2]) - 0x80)), 0};
+			m_canvas.setFont(&SUBSCRIPT);
+			m_canvas.drawString(digit, x + 1, y + SUBSCRIPT_DROP);
+			x += m_canvas.textWidth(digit) + 1;
+			m_canvas.setFont(font);
+			i += 2;
+		}
+		else
+		{
+			run += text[i];
+		}
+	}
+	flush();
 }
 
 int ScreenLayout::WrapText(const std::string &text, int x, int y, int maxWidth, int lineHeight, int maxY)
@@ -183,7 +276,7 @@ void ScreenLayout::Header(const std::string &left, const std::string &right, int
 		// Badge (e.g. TEST) in a white box.
 		std::string fitted = Fit(badge, W - MARGIN - x - rightNeeds - 10);
 		int boxW = m_canvas.textWidth(fitted.c_str()) + 10;
-		m_canvas.fillRect(x, 3, boxW, HEADER_H - 6, WHITE);
+		m_canvas.fillRect(x, 1, boxW, HEADER_H - 2, WHITE);
 		m_canvas.setTextColor(BLACK);
 		m_canvas.setTextDatum(textdatum_t::baseline_left);
 		m_canvas.drawString(fitted.c_str(), x + 5, HEADER_BASE);
@@ -247,7 +340,7 @@ std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const s
 											 const std::string &footerLeft, const std::string &footerRight)
 {
 	Begin();
-	Header("Koppelen", "scan in app");
+	Header("Koppelen", "via app");
 	// A QR code needs 4 modules of white around it: the header bar above it counts as black.
 	m_canvas.qrcode(payload.c_str(), (W - PROVISIONING_QR_SIZE) / 2, HEADER_H + PROVISIONING_QR_QUIET,
 					PROVISIONING_QR_SIZE);
@@ -344,16 +437,34 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	// Main value with its label; the font gets smaller only if the value does not fit.
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
-	m_canvas.drawString(Fit(status.bigLabel, W - 2 * MARGIN).c_str(), MARGIN, STATUS_LABEL_BASE);
+	DrawLabel(status.bigLabel, MARGIN, STATUS_LABEL_BASE, W - 2 * MARGIN);
+	// Value and unit share the baseline; the unit is smaller and right after the value. The value font gets smaller
+	// only when value and unit do not fit.
+	constexpr int UNIT_GAP = 5;
+	int unitWidth = 0;
+	if (!status.bigUnit.empty())
+	{
+		m_canvas.setFont(m_fonts.title);
+		unitWidth = std::min(LabelWidth(status.bigUnit), W / 3) + UNIT_GAP;
+	}
+	int valueMax = W - 2 * MARGIN - unitWidth;
 	const lgfx::IFont *candidates[] = {IsNumber(status.bigValue) ? m_fonts.bigNumber : m_fonts.bigText,
+									   IsNumber(status.bigValue) ? m_fonts.bigNumber2 : m_fonts.bigText,
 									   m_fonts.bigText, m_fonts.value};
 	for (auto font : candidates)
 	{
 		m_canvas.setFont(font);
-		if (m_canvas.textWidth(status.bigValue.c_str()) <= W - 2 * MARGIN)
+		if (m_canvas.textWidth(status.bigValue.c_str()) <= valueMax)
 			break;
 	}
-	m_canvas.drawString(Fit(status.bigValue, W - 2 * MARGIN).c_str(), MARGIN - 1, STATUS_BIG_BASE);
+	std::string value = Fit(status.bigValue, valueMax);
+	m_canvas.drawString(value.c_str(), MARGIN - 1, STATUS_BIG_BASE);
+	if (!status.bigUnit.empty())
+	{
+		int unitX = MARGIN - 1 + m_canvas.textWidth(value.c_str()) + UNIT_GAP;
+		m_canvas.setFont(m_fonts.title);
+		DrawLabel(status.bigUnit, unitX, STATUS_BIG_BASE, W - MARGIN - unitX);
+	}
 
 	// Tiles.
 	size_t n = std::min<size_t>(status.tiles.size(), 3);
@@ -369,7 +480,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			int textX = tx + (i > 0 ? 4 : MARGIN);
 			int maxW = tx + tileW - textX - 2;
 			m_canvas.setFont(m_fonts.text);
-			m_canvas.drawString(Fit(status.tiles[i].first, maxW).c_str(), textX, STATUS_TILE_LABEL_BASE);
+			DrawLabel(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, maxW);
 			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})
 			{
 				m_canvas.setFont(font);
@@ -381,7 +492,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	}
 
 	// The layout key ignores the values: new measurements get a fast refresh.
-	return "status:" + status.bigLabel + ":" + std::to_string(n) + ":" + status.badge + ":" + status.device;
+	return "status:" + status.bigLabel + ":" + status.bigUnit + ":" + std::to_string(n) + ":" + status.badge + ":" + status.device;
 }
 
 std::string ScreenLayout::DrawMenu(const std::vector<std::string> &lines, int highlightedLine)

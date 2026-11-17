@@ -2,7 +2,7 @@
 
 The fonts in `u8g2_fonts.c` come unchanged from [U8g2](https://github.com/olikraus/u8g2) (`csrc/u8g2_fonts.c`).
 
-## helvB14, helvB18, helvB24, ncenB14, ncenB18, ncenB24 (X11 fonts from Adobe)
+## helvB10, helvB14, helvB18, helvB24, ncenB14, ncenB18, ncenB24 (X11 fonts from Adobe)
 
 ```
 Copyright 1984-1989, 1994 Adobe Systems Incorporated.
