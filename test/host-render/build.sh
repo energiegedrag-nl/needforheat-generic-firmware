@@ -29,6 +29,7 @@ for f in src/util/fonts/u8g2_fonts.c "$L"/lgfx/utility/*.c "$L"/lgfx/Fonts/efont
 done
 
 # This repo's code, with warnings as errors.
-${CXX:-g++} -std=c++17 -O1 -Wall -Wextra -Werror -I include -isystem "$L" -DLGFX_LINUX_FB -DSCREEN_LAYOUT_FONT_COMPARISON \n	test/host-render/render_screens.cpp src/util/screen_layout.cpp $OBJS -lpthread -o "$WORK/render_screens"
+${CXX:-g++} -std=c++17 -O1 -Wall -Wextra -Werror -I include -isystem "$L" -DLGFX_LINUX_FB -DSCREEN_LAYOUT_FONT_COMPARISON \
+	test/host-render/render_screens.cpp src/util/screen_layout.cpp $OBJS -lpthread -o "$WORK/render_screens"
 
 "$WORK/render_screens" "$OUT"
