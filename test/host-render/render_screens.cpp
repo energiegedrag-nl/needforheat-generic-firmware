@@ -113,8 +113,8 @@ namespace
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
 				 s.tiles = {{"gas m³", "0,0"}, {"DSMR", "5.0"}};
-				 s.footerLeft = "128 onverzonden";
-				 s.footerRight = "info";
+				 s.footerLeft = "128 onverzonden"; // DisplayStatus clears footerRight then
+				 s.footerRight = "";
 				 l.DrawStatus(s);
 			 }},
 			{"10-menu", [](ScreenLayout &l)

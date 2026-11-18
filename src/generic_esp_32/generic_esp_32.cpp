@@ -1142,7 +1142,10 @@ namespace GenericESP32Firmware
             auto pending = SecureUpload::PersistentStore::GetInstance().Pending();
             time_t lastUpload = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
             if (pending > 0)
+            {
                 status.footerLeft = std::to_string(pending) + " onverzonden";
+                status.footerRight.clear(); // the warning gets the whole footer
+            }
             else if (lastUpload > 0)
             {
                 struct tm local;
