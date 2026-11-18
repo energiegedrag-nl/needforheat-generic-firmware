@@ -150,7 +150,7 @@ namespace
 			{"20-p1base-no-meter", [](ScreenLayout &l)
 			 { l.DrawStatus(P1Base("geen meter", "0,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
 			{"21-p1base-overloaded", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("P1 overbelast", "4,5", "V", {{"lezer", "aan"}, {"laden", "60mA"}},
+			 { l.DrawStatus(P1Base("P1 overbelast", "4,5", "V", {{"lezer", "aan"}, {"laden", "60mA"}}, "P1")); }},
 			{"22-battery-day", [](ScreenLayout &l)
 			 {
 				 ScreenLayout::Status s;
@@ -183,7 +183,7 @@ namespace
 			{"25-battery-empty", [](ScreenLayout &l)
 			 { l.DrawMessage("Batterij leeg",
 							 {"Het apparaat stopt met meten.", "Sluit de USB-voeding aan; daarna meet het vanzelf verder."},
-							 ""); }}, "P1")); }},
+							 ""); }},
 		};
 		return samples;
 	}
