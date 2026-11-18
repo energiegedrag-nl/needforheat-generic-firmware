@@ -41,7 +41,7 @@ namespace
 		s.bigUnit = unit;
 		s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
 		s.footerLeft = "icon:uploaded 14:10";
-		s.footerRight = "info";
+		s.footerRight = "icon:info";
 		return s;
 	}
 
@@ -91,7 +91,7 @@ namespace
 				 s.bigUnit = "ppm";
 				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}, {"icon:person", "2"}};
 				 s.footerLeft = "icon:uploaded 14:10";
-				 s.footerRight = "info";
+				 s.footerRight = "icon:info";
 				 l.DrawStatus(s);
 			 }},
 			{"08-status-p1", [](ScreenLayout &l)
@@ -106,7 +106,7 @@ namespace
 				 s.bigUnit = "kW";
 				 s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
 				 s.footerLeft = "icon:uploaded di"; // last upload earlier this week
-				 s.footerRight = "info";
+				 s.footerRight = "icon:info";
 				 l.DrawStatus(s);
 			 }},
 			{"09-status-offline", [](ScreenLayout &l)
@@ -120,7 +120,7 @@ namespace
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
 				 s.tiles = {{"icon:gas", "0,0 m³"}, {"DSMR", "5.0"}};
-				 s.footerLeft = "128 onverzonden"; // DisplayStatus clears footerRight then
+				 s.footerLeft = "icon:not_uploaded 128 metingen"; // DisplayStatus clears footerRight then
 				 s.footerRight = "";
 				 l.DrawStatus(s);
 			 }},
@@ -144,9 +144,9 @@ namespace
 			// P1-BASE v3 with the P1 reader firmware (needforheat-p1-reader-firmware, src/p1.cpp): screen 8 (P1 overview)
 			// and screen 9 (P1 cable diagnosis), with the texts that firmware uses; supply indicator in the footer.
 			{"16-p1base-overview", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("stroom", "0,42", "kW", {{"DSMR", "5.0"}, {"lezer", "aan"}, {"laden", "120mA"}}, "P1")); }},
+			 { l.DrawStatus(P1Base("icon:power", "0,42", "kW", {{"DSMR", "5.0"}, {"lezer", "aan"}, {"icon:charging", "120mA"}}, "P1")); }},
 			{"17-p1base-dsmr3-usb", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("stroom", "-1,85", "kW", {{"DSMR", "3.0"}, {"lezer", "uit"}, {"laden", "uit"}}, "USB")); }},
+			 { l.DrawStatus(P1Base("icon:power", "-1,85", "kW", {{"DSMR", "3.0"}, {"lezer", "uit"}, {"icon:charging", "uit"}}, "USB")); }},
 			{"18-p1base-no-data", [](ScreenLayout &l)
 			 { l.DrawStatus(P1Base("geen data", "5,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
 			{"19-p1base-dsmr2-on-battery", [](ScreenLayout &l)

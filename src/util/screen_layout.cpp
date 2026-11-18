@@ -356,31 +356,50 @@ int ScreenLayout::Footer(const std::string &left, const std::string &right)
 	m_canvas.fillRect(0, FOOTER_LINE, W, 2, BLACK);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextColor(BLACK);
+	// Both sides may start with "icon:<name>" (include/util/icons.hpp), followed by a space and text: e.g. the upload
+	// icon and "14:10" on the left, the info icon on the right.
+	auto split = [](const std::string &s, std::string &text) -> const Icons::Icon *
+	{
+		constexpr const char *PREFIX = "icon:";
+		text = s;
+		if (s.rfind(PREFIX, 0) != 0)
+			return nullptr;
+		size_t space = s.find(' ');
+		std::string name = s.substr(std::strlen(PREFIX), space == std::string::npos ? std::string::npos : space - std::strlen(PREFIX));
+		const Icons::Icon *icon = Icons::Find(name.c_str());
+		if (icon != nullptr)
+			text = space == std::string::npos ? "" : s.substr(space + 1);
+		return icon;
+	};
+	auto iconY = [](const Icons::Icon *icon) { return FOOTER_LINE + 2 + (H - FOOTER_LINE - 2 - icon->height) / 2; };
+
 	int rightWidth = 0;
 	if (!right.empty())
 	{
-		std::string fitted = Fit(right, W / 2 - MARGIN);
-		rightWidth = m_canvas.textWidth(fitted.c_str()) + 8;
-		m_canvas.setTextDatum(textdatum_t::baseline_right);
-		m_canvas.drawString(fitted.c_str(), W - MARGIN, FOOTER_BASE);
-	}
-	m_canvas.setTextDatum(textdatum_t::baseline_left);
-	// "icon:<name> text": the icon (include/util/icons.hpp), then the text, e.g. the upload icon and "14:10".
-	int x = MARGIN;
-	std::string text = left;
-	constexpr const char *PREFIX = "icon:";
-	if (text.rfind(PREFIX, 0) == 0)
-	{
-		size_t space = text.find(' ');
-		std::string name = text.substr(std::strlen(PREFIX), space == std::string::npos ? std::string::npos : space - std::strlen(PREFIX));
-		const Icons::Icon *icon = Icons::Find(name.c_str());
+		std::string text;
+		const Icons::Icon *icon = split(right, text);
+		int xr = W - MARGIN;
+		if (!text.empty())
+		{
+			std::string fitted = Fit(text, W / 2 - MARGIN);
+			m_canvas.setTextDatum(textdatum_t::baseline_right);
+			m_canvas.drawString(fitted.c_str(), xr, FOOTER_BASE);
+			xr -= m_canvas.textWidth(fitted.c_str()) + (icon != nullptr ? 4 : 0);
+		}
 		if (icon != nullptr)
 		{
-			m_canvas.drawBitmap(x, FOOTER_LINE + 2 + (H - FOOTER_LINE - 2 - icon->height) / 2, icon->bits, icon->width,
-								icon->height, BLACK);
-			x += icon->width + 5;
-			text = space == std::string::npos ? "" : text.substr(space + 1);
+			xr -= icon->width;
+			m_canvas.drawBitmap(xr, iconY(icon), icon->bits, icon->width, icon->height, BLACK);
 		}
+		rightWidth = W - MARGIN - xr + 8;
+	}
+	m_canvas.setTextDatum(textdatum_t::baseline_left);
+	int x = MARGIN;
+	std::string text;
+	if (const Icons::Icon *icon = split(left, text))
+	{
+		m_canvas.drawBitmap(x, iconY(icon), icon->bits, icon->width, icon->height, BLACK);
+		x += icon->width + 5;
 	}
 	m_canvas.drawString(Fit(text, W - MARGIN - x - rightWidth).c_str(), x, FOOTER_BASE);
 	return FOOTER_LINE;

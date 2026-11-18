@@ -1184,7 +1184,8 @@ namespace GenericESP32Firmware
             time_t lastUpload = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
             if (pending > 0)
             {
-                status.footerLeft = std::to_string(pending) + " onverzonden";
+                // Cloud with a stroke: measurements are waiting on the device until the server can be reached.
+                status.footerLeft = "icon:not_uploaded " + std::to_string(pending) + " metingen";
                 status.footerRight.clear(); // the warning gets the whole footer
             }
             else if (lastUpload > 0)
