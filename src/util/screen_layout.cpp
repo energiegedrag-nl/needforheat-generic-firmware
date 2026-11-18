@@ -478,7 +478,8 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			if (i > 0)
 				m_canvas.fillRect(tx - 1, STATUS_TILES_LINE, 2, bottom - STATUS_TILES_LINE, BLACK);
 			int textX = tx + (i > 0 ? 4 : MARGIN);
-			int maxW = tx + tileW - textX - 2;
+			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder of W / n.
+			int maxW = (i + 1 == n ? W : tx + tileW) - textX - 2;
 			m_canvas.setFont(m_fonts.text);
 			DrawLabel(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, maxW);
 			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -41,6 +42,15 @@ namespace
 		s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
 		s.footerLeft = "verstuurd 14:10";
 		s.footerRight = "info";
+		return s;
+	}
+
+	ScreenLayout::Status P1Base(const char *label, const char *value, const char *unit,
+								std::vector<std::pair<std::string, std::string>> tiles, const char *supply)
+	{
+		ScreenLayout::Status s = Big(label, value, unit);
+		s.tiles = std::move(tiles);
+		s.footerRight = supply;
 		return s;
 	}
 
@@ -124,6 +134,20 @@ namespace
 			 { l.DrawStatus(Big("binnen", "21,5", "°C")); }},
 			{"15-status-gas-rate", [](ScreenLayout &l)
 			 { l.DrawStatus(Big("gas", "1,25", "m³/h")); }},
+			// P1-BASE v3 with the P1 reader firmware (needforheat-p1-reader-firmware, src/p1.cpp): screen 8 (P1 overview)
+			// and screen 9 (P1 cable diagnosis), with the texts that firmware uses; supply indicator in the footer.
+			{"16-p1base-overview", [](ScreenLayout &l)
+			 { l.DrawStatus(P1Base("stroom", "0,42", "kW", {{"DSMR", "5.0"}, {"lezer", "aan"}, {"laden", "120mA"}}, "P1")); }},
+			{"17-p1base-dsmr3-usb", [](ScreenLayout &l)
+			 { l.DrawStatus(P1Base("stroom", "-1,85", "kW", {{"DSMR", "3.0"}, {"lezer", "uit"}, {"laden", "uit"}}, "USB")); }},
+			{"18-p1base-no-data", [](ScreenLayout &l)
+			 { l.DrawStatus(P1Base("geen data", "5,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
+			{"19-p1base-dsmr23-needs-usb", [](ScreenLayout &l)
+			 { l.DrawStatus(P1Base("DSMR 2/3: USB nodig", "0,0", "V", {{"lezer", "aan"}, {"laden", "uit"}}, "accu")); }},
+			{"20-p1base-no-meter", [](ScreenLayout &l)
+			 { l.DrawStatus(P1Base("geen meter", "0,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
+			{"21-p1base-overloaded", [](ScreenLayout &l)
+			 { l.DrawStatus(P1Base("P1 overbelast", "4,5", "V", {{"lezer", "aan"}, {"laden", "60mA"}}, "P1")); }},
 		};
 		return samples;
 	}
