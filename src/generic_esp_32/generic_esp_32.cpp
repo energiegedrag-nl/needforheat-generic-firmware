@@ -1045,7 +1045,9 @@ namespace GenericESP32Firmware
 #ifdef M5STACK_COREINK
     void SetPreProvisioningAction(const std::string &title, const std::string &question, void (*run)())
     {
-        s_preAction = {title, question, run};
+        s_preAction.title = title;
+        s_preAction.question = question;
+        s_preAction.run = run;
     }
 
     void DisplayMessage(const std::string &title, const std::vector<std::string> &paragraphs, const std::string &footer)
