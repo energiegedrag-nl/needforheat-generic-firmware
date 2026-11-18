@@ -184,6 +184,8 @@ namespace
 			{"24-battery-critical", [](ScreenLayout &l)
 			 { l.DrawMessage("Batterij bijna leeg", {"Sluit de USB-voeding aan.", "Het apparaat meet daarna gewoon verder."},
 							 "lading 4%"); }},
+			{"26-co2-calibration", [](ScreenLayout &l)
+			 { l.DrawMessage("CO₂ kalibreren", {"Ligt de module buiten, in de open lucht?", "Draai het wieltje omlaag om te bevestigen."}, "30 s"); }},
 			{"25-battery-empty", [](ScreenLayout &l)
 			 { l.DrawMessage("Batterij leeg",
 							 {"Het apparaat stopt met meten.", "Sluit de USB-voeding aan; daarna meet het vanzelf verder."},
