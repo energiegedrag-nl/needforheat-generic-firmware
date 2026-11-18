@@ -113,7 +113,7 @@ namespace
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
 				 s.tiles = {{"gas m³", "0,0"}, {"DSMR", "5.0"}};
-				 s.footerLeft = "128 wachten";
+				 s.footerLeft = "128 niet verstuurd";
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
 			 }},

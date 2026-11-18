@@ -84,10 +84,13 @@ namespace GenericESP32Firmware
 #ifdef M5STACK_COREINK
     /**
      * Show the overview screen on the e-ink display (see Screen::Status), e.g. after each measurement.
-     * Fills in what the generic firmware knows: Wi-Fi state, clock, a TEST badge for a test server and,
-     * when footerLeft is empty, the number of measurements waiting for upload.
+     * Fills in what the generic firmware knows: Wi-Fi state, the date, a TEST badge for a test server and,
+     * when footerLeft is empty, the time of the last upload or the number of measurements not sent yet.
      */
     void DisplayStatus(Screen::Status status);
+
+    /** Draw the last overview again with fresh upload state (called after each upload); nothing before the first. */
+    void RefreshStatus();
 #endif
 
     /**

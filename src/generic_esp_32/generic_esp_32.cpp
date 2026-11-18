@@ -1089,7 +1089,41 @@ namespace GenericESP32Firmware
     }
 
 #ifdef M5STACK_COREINK
+    namespace
+    {
+        /** The last overview as the device gave it (before the generic fields are filled in), for RefreshStatus. */
+        std::mutex s_lastStatusMutex;
+        Screen::Status s_lastStatus;
+        bool s_haveStatus = false;
+
+        void DrawStatus(Screen::Status status);
+    } // namespace
+
     void DisplayStatus(Screen::Status status)
+    {
+        {
+            std::lock_guard<std::mutex> lock(s_lastStatusMutex);
+            s_lastStatus = status;
+            s_haveStatus = true;
+        }
+        DrawStatus(status);
+    }
+
+    void RefreshStatus()
+    {
+        Screen::Status status;
+        {
+            std::lock_guard<std::mutex> lock(s_lastStatusMutex);
+            if (!s_haveStatus)
+                return;
+            status = s_lastStatus;
+        }
+        DrawStatus(status);
+    }
+
+    namespace
+    {
+    void DrawStatus(Screen::Status status)
     {
         if (s_wifiEventGroup != nullptr)
             status.wifiConnected = (xEventGroupGetBits(s_wifiEventGroup) & WIFI_CONNECTED_EVENT) != 0;
@@ -1108,7 +1142,7 @@ namespace GenericESP32Firmware
             auto pending = SecureUpload::PersistentStore::GetInstance().Pending();
             time_t lastUpload = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
             if (pending > 0)
-                status.footerLeft = std::to_string(pending) + " wachten";
+                status.footerLeft = std::to_string(pending) + " niet verstuurd";
             else if (lastUpload > 0)
             {
                 struct tm local;
@@ -1123,6 +1157,7 @@ namespace GenericESP32Firmware
         }
         s_screen.DisplayStatus(status);
     }
+    } // namespace
 #endif // M5STACK_COREINK
 
     void SetDisplayOffset(const LocalTime::ServerOffset &offset)

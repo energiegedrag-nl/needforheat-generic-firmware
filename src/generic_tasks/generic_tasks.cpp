@@ -39,6 +39,11 @@ namespace GenericTasks
 #endif // CONFIG_TWOMES_PRESENCE_DETECTION
 
 		secureUploadQueue.Upload();
+
+#ifdef M5STACK_COREINK
+		// The overview was drawn at the measurement, before this upload ("7 niet verstuurd"): show the result.
+		GenericESP32Firmware::RefreshStatus();
+#endif
 	}
 
 	void HeartbeatTask(void *taskInfo)
