@@ -36,12 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
       - name: Host tests
-        run: |
-          for t in test/host/*_test.cpp; do
-            [ -e "$t" ] || continue
-            g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include "$t" -o "${t%.cpp}"
-            "./${t%.cpp}"
-          done
+        run: sh test/host/run.sh
 
   draft-release:
     needs: [build, host-tests]
