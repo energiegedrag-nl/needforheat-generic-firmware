@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <util/local_time.hpp>
 
 #include <driver/gpio.h>
 
@@ -73,6 +74,12 @@ namespace GenericESP32Firmware
      * else the one built into the firmware.
      */
     std::string GetServerHostname();
+
+    /**
+     * Local time offset for what the screen shows, as the server sent it with the last upload. Stored in NVS only
+     * when it changed. Until the first one arrives, the built-in Dutch rule applies (LocalTime).
+     */
+    void SetDisplayOffset(const LocalTime::ServerOffset &offset);
 
 #ifdef M5STACK_COREINK
     /**

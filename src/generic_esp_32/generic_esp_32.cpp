@@ -18,6 +18,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <vector>
 
 #include <util/error.hpp>
@@ -28,6 +29,8 @@
 #include <util/buzzer.hpp>
 #include <util/screen.hpp>
 #include <util/provisioning_code.hpp>
+#include <util/upload_policy.hpp>
+#include <util/local_time.hpp>
 #include <specific_m5coreink/powerpin.h>
 #include <specific_m5coreink/rtc.h>
 #include <scheduler.hpp>
@@ -131,6 +134,31 @@ namespace GenericESP32Firmware
 
         /** HTTP status of the last activation attempt (0: none or no connection), for the screen. */
         static int s_lastActivationStatus = 0;
+
+        /** Local time offset from the server (see SetDisplayOffset), loaded from NVS on first use. */
+        static std::mutex s_displayOffsetMutex;
+        static bool s_displayOffsetLoaded = false;
+        static LocalTime::ServerOffset s_displayOffset;
+
+        /** Call with s_displayOffsetMutex held. */
+        const LocalTime::ServerOffset &DisplayOffsetLocked()
+        {
+            if (!s_displayOffsetLoaded)
+            {
+                std::string text;
+                if (NVS::Get(NVS_NAMESPACE, "tz_offset", text) == ESP_OK)
+                    LocalTime::Parse(text, s_displayOffset);
+                s_displayOffsetLoaded = true;
+            }
+            return s_displayOffset;
+        }
+
+        /** Broken-down local time for the screen. */
+        void LocalTimeForScreen(time_t utc, struct tm &local)
+        {
+            std::lock_guard<std::mutex> lock(s_displayOffsetMutex);
+            LocalTime::Local(utc, DisplayOffsetLocked(), local);
+        }
 
 #ifdef M5STACK_COREINK
         /** "TEST" for a test server, empty for production; the server name otherwise. */
@@ -835,6 +863,7 @@ namespace GenericESP32Firmware
                 return;
             }
             SetBearer(authorizationToken);
+            NVS::Erase(NVS_NAMESPACE, "act_fail");
 
             // Optional: API v2 returned device_type.info_url; API v3 does not. Keep the default then.
             auto infoURL = cJSON_GetStringValue(cJSON_GetObjectItem(cJSON_GetObjectItem(json, "device_type"), "info_url"));
@@ -842,6 +871,66 @@ namespace GenericESP32Firmware
                 SetInfoURL(infoURL);
 
             cJSON_Delete(json);
+        }
+
+        /**
+         * Activation failed (no bearer). Uploads cannot work without one. Either try again later, with a growing
+         * pause (1, 2, 4, ... minutes, at most 30, so a server outage does not drain the battery), or, when the
+         * server refused this device several times in a row, forget the Wi-Fi network and show the provisioning
+         * QR code again, so the participant can simply scan it again. Does not return.
+         */
+        void HandleActivationFailure()
+        {
+            uint32_t failures = 0;
+            NVS::Get(NVS_NAMESPACE, "act_fail", failures);
+            failures++;
+            auto err = NVS::Set(NVS_NAMESPACE, "act_fail", failures);
+            Error::CheckAppendName(err, TAG, "An error occured when setting NVS key act_fail");
+
+            const int status = s_lastActivationStatus;
+            const bool refused = UploadPolicy::IsActivationRefused(status);
+            const std::string footer = "code " + std::to_string(status) + "  " + GetServerHostname();
+
+            if (refused && failures >= UploadPolicy::ACTIVATION_REFUSALS_BEFORE_RESET)
+            {
+                ESP_LOGE(TAG, "The server refused the activation %u times (status %d). Starting provisioning again.",
+                         static_cast<unsigned>(failures), status);
+#ifdef M5STACK_COREINK
+                s_screen.DisplayMessage("Koppelen mislukt",
+                                        {"De server weigert deze module.",
+                                         "Zo meteen verschijnt de QR-code weer: scan die opnieuw met de app.",
+                                         "Lukt het weer niet? Neem contact op met de onderzoeker."},
+                                        footer);
+#endif // M5STACK_COREINK
+                vTaskDelay(Delay::Seconds(30));
+                ResetWireless(); // also clears act_fail; restarts
+            }
+
+            const uint32_t delay_s = UploadPolicy::ActivationRetryDelay_s(failures);
+            ESP_LOGE(TAG, "Device activation failed (status %d, attempt %u); trying again in %u s.", status,
+                     static_cast<unsigned>(failures), static_cast<unsigned>(delay_s));
+#ifdef M5STACK_COREINK
+            const std::string reason = status <= 0 ? "Server niet bereikbaar."
+                                       : refused   ? "Server weigert de module."
+                                                   : "Server antwoordt met een fout. Is de module al toegevoegd in de app?";
+            s_screen.DisplayMessage("Activeren lukt niet",
+                                    {reason,
+                                     "Nieuwe poging over " + std::to_string(delay_s / 60) + " min.",
+                                     "Blijft het mislukken? Reset de wifi (knop) en koppel opnieuw."},
+                                    footer);
+#endif // M5STACK_COREINK
+
+            // Radio off while waiting; on battery the CoreInk switches off and its RTC wakes it up.
+            esp_wifi_stop();
+#ifdef M5STACK_COREINK
+            rtc_set_alarm(time(nullptr) + delay_s);
+            vTaskDelay(Delay::MilliSeconds(250));
+            s_screen.PrepareForPowerOff();
+            powerpin_reset();
+            // Still running: USB power keeps the CoreInk on. Wait instead.
+#endif // M5STACK_COREINK
+            vTaskDelay(Delay::Seconds(delay_s));
+            esp_restart();
         }
     } // namespace
 
@@ -899,20 +988,7 @@ namespace GenericESP32Firmware
 
         ActivateDevice();
         if (GetBearer().empty())
-        {
-            // Activation failed (e.g. server unreachable). Uploads cannot work without a bearer,
-            // so try again after a pause by restarting, as the firmware implicitly did before.
-            ESP_LOGE(TAG, "Device activation failed; restarting in 60 s to try again.");
-#ifdef M5STACK_COREINK
-            s_screen.DisplayMessage("Activeren lukt niet",
-                                    {s_lastActivationStatus <= 0 ? "Server niet bereikbaar. Nieuwe poging over 60 s."
-                                                                 : "Server weigert de module. Nieuwe poging over 60 s.",
-                                     "Blijft het mislukken? Reset de wifi (knop) en koppel opnieuw."},
-                                    "code " + std::to_string(s_lastActivationStatus) + "  " + GetServerHostname());
-#endif // M5STACK_COREINK
-            vTaskDelay(Delay::Seconds(60));
-            esp_restart();
-        }
+            HandleActivationFailure(); // does not return
 
 #ifdef CONFIG_TWOMES_PRESENCE_DETECTION
         ControlPanel::initialzeButtons();
@@ -991,6 +1067,7 @@ namespace GenericESP32Firmware
 
         // Remove key so we do post provisioning steps.
         NVS::Erase(NVS_NAMESPACE, "ppDone");
+        NVS::Erase(NVS_NAMESPACE, "act_fail");
 
         esp_wifi_restore();
         esp_restart();
@@ -1019,7 +1096,7 @@ namespace GenericESP32Firmware
         {
             time_t now = time(nullptr);
             struct tm local;
-            localtime_r(&now, &local);
+            LocalTimeForScreen(now, local); // the clock runs in UTC; people read local time
             if (local.tm_year + 1900 >= 2024) // only a synchronised clock
             {
                 char text[8];
@@ -1038,7 +1115,7 @@ namespace GenericESP32Firmware
             else if (lastUpload > 0)
             {
                 struct tm local;
-                localtime_r(&lastUpload, &local);
+                LocalTimeForScreen(lastUpload, local);
                 char text[8];
                 strftime(text, sizeof(text), "%H:%M", &local);
                 status.footerLeft = std::string("verstuurd ") + text;
@@ -1049,6 +1126,19 @@ namespace GenericESP32Firmware
         s_screen.DisplayStatus(status);
     }
 #endif // M5STACK_COREINK
+
+    void SetDisplayOffset(const LocalTime::ServerOffset &offset)
+    {
+        if (!offset.valid)
+            return;
+        std::lock_guard<std::mutex> lock(s_displayOffsetMutex);
+        if (offset == DisplayOffsetLocked())
+            return; // unchanged: no NVS write (an upload every 10 minutes)
+        s_displayOffset = offset;
+        auto err = NVS::Set(NVS_NAMESPACE, "tz_offset", LocalTime::Serialize(offset));
+        Error::CheckAppendName(err, TAG, "An error occured when setting NVS key tz_offset");
+        ESP_LOGI(TAG, "Local time offset from the server: %s", LocalTime::Serialize(offset).c_str());
+    }
 
     std::string GetServerHostname()
     {

@@ -13,6 +13,7 @@
 
 #include <generic_esp_32.hpp>
 #include <persistent_store.hpp>
+#include <util/upload_policy.hpp>
 
 constexpr const char *TAG = "Secure upload";
 
@@ -55,12 +56,32 @@ namespace SecureUpload
 		}
 
 		/**
-		 * Retry later only for failures that may go away: no connection, server errors, timeouts, rate limits.
-		 * Other 4xx answers will not change by retrying.
+		 * Take the local time offset from an upload response (API: utc_offset_s, next_offset_change,
+		 * next_utc_offset_s), for the time on the screen. Older servers do not send it: nothing changes then.
 		 */
-		bool IsRetryable(int statusCode)
+		void TakeDisplayOffset(const HTTPUtil::buffer_t &response)
 		{
-			return statusCode <= 0 || statusCode >= 500 || statusCode == 408 || statusCode == 429;
+			auto json = cJSON_Parse(response.c_str());
+			if (json == nullptr)
+				return;
+			auto offset = cJSON_GetObjectItem(json, "utc_offset_s");
+			auto nextChange = cJSON_GetObjectItem(json, "next_offset_change");
+			auto nextOffset = cJSON_GetObjectItem(json, "next_utc_offset_s");
+			if (cJSON_IsNumber(offset) && LocalTime::PlausibleOffset(static_cast<int64_t>(offset->valuedouble)))
+			{
+				LocalTime::ServerOffset s;
+				s.valid = true;
+				s.offset_s = static_cast<int32_t>(offset->valuedouble);
+				s.nextOffset_s = s.offset_s;
+				if (cJSON_IsNumber(nextChange) && cJSON_IsNumber(nextOffset) && nextChange->valuedouble > 0 &&
+					LocalTime::PlausibleOffset(static_cast<int64_t>(nextOffset->valuedouble)))
+				{
+					s.nextChange = static_cast<int64_t>(nextChange->valuedouble);
+					s.nextOffset_s = static_cast<int32_t>(nextOffset->valuedouble);
+				}
+				GenericESP32Firmware::SetDisplayOffset(s);
+			}
+			cJSON_Delete(json);
 		}
 
 		/**
@@ -90,7 +111,10 @@ namespace SecureUpload
 			if (statusCode != 200)
 				ESP_LOGE(TAG, "Posting to backend returned statuscode %d. Response: %s", statusCode, dataReceive.c_str());
 			else
+			{
 				s_lastSuccessfulUpload = time(nullptr);
+				TakeDisplayOffset(dataReceive);
+			}
 			return statusCode;
 		}
 	} // namespace
@@ -149,7 +173,7 @@ namespace SecureUpload
 						 static_cast<unsigned>(items.size()), static_cast<unsigned>(store.Pending()));
 				continue;
 			}
-			if (!IsRetryable(statusCode))
+			if (!UploadPolicy::IsRetryable(statusCode))
 			{
 				ESP_LOGE(TAG, "Not retryable: %u measurements dropped.", static_cast<unsigned>(items.size()));
 				store.Consume(records);
@@ -184,7 +208,7 @@ namespace SecureUpload
 			return;
 		}
 
-		if (!IsRetryable(statusCode))
+		if (!UploadPolicy::IsRetryable(statusCode))
 		{
 			ESP_LOGE(TAG, "Not retryable: %u measurements dropped.", static_cast<unsigned>(items.size()));
 			for (auto measurement : items)
