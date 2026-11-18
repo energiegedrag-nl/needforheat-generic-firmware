@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <string>
@@ -156,5 +157,35 @@ namespace LocalTime
 		s.nextChange = values[1];
 		s.nextOffset_s = static_cast<int32_t>(values[2]);
 		return true;
+	}
+	/** Dutch short weekday, e.g. "wo" (the device has no locale support). */
+	inline const char *WeekdayNl(const struct tm &local)
+	{
+		static const char *const days[] = {"zo", "ma", "di", "wo", "do", "vr", "za"};
+		return days[(local.tm_wday % 7 + 7) % 7];
+	}
+
+	/** Dutch date for the screen, e.g. "wo 18 nov", or "18 nov" without the weekday (when space is short). */
+	inline std::string DateNl(const struct tm &local, bool weekday = true)
+	{
+		static const char *const months[] = {"jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"};
+		std::string date = std::to_string(local.tm_mday) + " " + months[(local.tm_mon % 12 + 12) % 12];
+		return weekday ? std::string(WeekdayNl(local)) + " " + date : date;
+	}
+
+	/** Footer text for the last upload; the footer holds about 15 characters next to "info".
+	 *  Today: "verstuurd 14:10"; within the last 6 days: "verstuurd di"; older: "verstuurd 11 nov". */
+	inline std::string SentNl(const struct tm &sent, const struct tm &today, bool todayKnown)
+	{
+		if (todayKnown && sent.tm_year == today.tm_year && sent.tm_yday == today.tm_yday)
+		{
+			char text[16];
+			std::snprintf(text, sizeof(text), "%02d:%02d", sent.tm_hour, sent.tm_min);
+			return std::string("verstuurd ") + text;
+		}
+		long days = todayKnown ? static_cast<long>(DaysFromCivil(today.tm_year + 1900, today.tm_mon + 1, today.tm_mday) -
+												   DaysFromCivil(sent.tm_year + 1900, sent.tm_mon + 1, sent.tm_mday))
+							   : 99;
+		return std::string("verstuurd ") + (days >= 1 && days <= 6 ? WeekdayNl(sent) : DateNl(sent, false));
 	}
 } // namespace LocalTime

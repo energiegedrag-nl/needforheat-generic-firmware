@@ -160,6 +160,7 @@ namespace GenericESP32Firmware
             LocalTime::Local(utc, DisplayOffsetLocked(), local);
         }
 
+
 #ifdef M5STACK_COREINK
         /** "TEST" for a test server, empty for production; the server name otherwise. */
         std::string ServerBadge()
@@ -1088,43 +1089,75 @@ namespace GenericESP32Firmware
     }
 
 #ifdef M5STACK_COREINK
+    namespace
+    {
+        /** The last overview as the device gave it (before the generic fields are filled in), for RefreshStatus. */
+        std::mutex s_lastStatusMutex;
+        Screen::Status s_lastStatus;
+        bool s_haveStatus = false;
+
+        void DrawStatus(Screen::Status status);
+    } // namespace
+
     void DisplayStatus(Screen::Status status)
+    {
+        {
+            std::lock_guard<std::mutex> lock(s_lastStatusMutex);
+            s_lastStatus = status;
+            s_haveStatus = true;
+        }
+        DrawStatus(status);
+    }
+
+    void RefreshStatus()
+    {
+        Screen::Status status;
+        {
+            std::lock_guard<std::mutex> lock(s_lastStatusMutex);
+            if (!s_haveStatus)
+                return;
+            status = s_lastStatus;
+        }
+        DrawStatus(status);
+    }
+
+    namespace
+    {
+    void DrawStatus(Screen::Status status)
     {
         if (s_wifiEventGroup != nullptr)
             status.wifiConnected = (xEventGroupGetBits(s_wifiEventGroup) & WIFI_CONNECTED_EVENT) != 0;
-        if (status.clock.empty())
-        {
-            time_t now = time(nullptr);
-            struct tm local;
-            LocalTimeForScreen(now, local); // the clock runs in UTC; people read local time
-            if (local.tm_year + 1900 >= 2024) // only a synchronised clock
-            {
-                char text[8];
-                strftime(text, sizeof(text), "%H:%M", &local);
-                status.clock = text;
-            }
-        }
+        // The header shows the date, not a clock: the screen only refreshes with a measurement, so a time of day there
+        // would suggest a live clock. The only time on the screen is that of the last upload, in the footer (18-11).
+        time_t now = time(nullptr);
+        struct tm today;
+        LocalTimeForScreen(now, today); // the clock runs in UTC; people read local time
+        bool synchronised = today.tm_year + 1900 >= 2024;
         if (status.badge.empty())
             status.badge = ServerBadge();
+        if (status.date.empty() && synchronised)
+            status.date = LocalTime::DateNl(today, status.badge.empty()); // with a TEST badge the weekday does not fit
         if (status.footerLeft.empty())
         {
             auto pending = SecureUpload::PersistentStore::GetInstance().Pending();
             time_t lastUpload = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
             if (pending > 0)
-                status.footerLeft = std::to_string(pending) + " wachten";
+            {
+                status.footerLeft = std::to_string(pending) + " onverzonden";
+                status.footerRight.clear(); // the warning gets the whole footer
+            }
             else if (lastUpload > 0)
             {
                 struct tm local;
                 LocalTimeForScreen(lastUpload, local);
-                char text[8];
-                strftime(text, sizeof(text), "%H:%M", &local);
-                status.footerLeft = std::string("verstuurd ") + text;
+                status.footerLeft = LocalTime::SentNl(local, today, synchronised);
             }
             else
                 status.footerLeft = "alles verstuurd";
         }
         s_screen.DisplayStatus(status);
     }
+    } // namespace
 #endif // M5STACK_COREINK
 
     void SetDisplayOffset(const LocalTime::ServerOffset &offset)

@@ -44,7 +44,7 @@ public:
 	/** Overview screen of a device: one big value, up to three tiles, status in header and footer. */
 	struct Status
 	{
-		std::string clock;										// e.g. "14:20"; empty: not shown
+		std::string date;										// e.g. "wo 18 nov" (not a clock: the screen does not refresh every minute); empty: not shown
 		bool wifiConnected = true;
 		std::string badge;										// e.g. "TEST" for a test server; empty: none
 		std::string device;										// short device label in the header, e.g. "P1"

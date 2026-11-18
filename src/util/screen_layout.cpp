@@ -429,8 +429,8 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 {
 	Begin();
 
-	// Header: Wi-Fi symbol and clock left, badge (e.g. TEST) in the middle, device label right.
-	Header(status.clock, status.device, 22, status.badge);
+	// Header: Wi-Fi symbol and date left, badge (e.g. TEST) in the middle, device label right.
+	Header(status.date, status.device, 22, status.badge);
 	WifiSymbol(MARGIN - 1, HEADER_BASE + 1, status.wifiConnected, WHITE);
 	int bottom = Footer(status.footerLeft, status.footerRight);
 
