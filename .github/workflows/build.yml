@@ -74,6 +74,8 @@ jobs:
           ./flash_log_test
           g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/provisioning_code_test.cpp -o provisioning_code_test
           ./provisioning_code_test
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/text_parse_test.cpp src/util/semantic_version.cpp -o text_parse_test
+          ./text_parse_test
 
   # Draws every e-ink screen on the PC (LovyanGFX, 1-bit) and keeps the images as a build artifact, to check the
   # layout at 1:1 and x3 before flashing; see test/host-render/README.md.

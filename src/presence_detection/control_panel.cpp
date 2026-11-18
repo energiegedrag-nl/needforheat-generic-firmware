@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <vector>
 #include <set>
-#include <regex>
 #include <string>
 
 #include <esp_log.h>

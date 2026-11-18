@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <set>
-#include <regex>
+#include <util/text_parse.hpp>
 #include <string>
 
 #include <esp_log.h>
@@ -81,24 +81,19 @@ namespace PresenceDetection
 			 */
 			MACAddress(const std::string &mac)
 			{
-				std::regex regexString("^([0-9a-fA-F]{2})[:-]([0-9a-fA-F]{2})[:-]([0-9a-fA-F]{2})[:-]([0-9a-fA-F]{2})[:-]([0-9a-fA-F]{2})[:-]([0-9a-fA-F]{2})$");
-
-				std::smatch matches;
-				auto matchFound = std::regex_search(mac, matches, regexString);
-				if (!matchFound)
+				uint8_t octets[6];
+				if (!TextParse::ParseMacAddress(mac, octets))
 				{
 					ESP_LOGE(TAG, "Provided string in MACAddress constructor is not valid.");
 					return;
 				}
 
-				// Convert the matches from strings that hold HEX values into uint8_t
-				// and assign them to this class' members.
-				m_octet1 = std::strtoul(matches.str(1).c_str(), nullptr, 16);
-				m_octet2 = std::strtoul(matches.str(2).c_str(), nullptr, 16);
-				m_octet3 = std::strtoul(matches.str(3).c_str(), nullptr, 16);
-				m_octet4 = std::strtoul(matches.str(4).c_str(), nullptr, 16);
-				m_octet5 = std::strtoul(matches.str(5).c_str(), nullptr, 16);
-				m_octet6 = std::strtoul(matches.str(6).c_str(), nullptr, 16);
+				m_octet1 = octets[0];
+				m_octet2 = octets[1];
+				m_octet3 = octets[2];
+				m_octet4 = octets[3];
+				m_octet5 = octets[4];
+				m_octet6 = octets[5];
 			}
 
 			/**
