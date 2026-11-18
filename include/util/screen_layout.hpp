@@ -52,7 +52,7 @@ public:
 		std::string bigLabel;									// e.g. "CO₂" (subscript digits allowed)
 		std::string bigValue;									// e.g. "612"
 		std::string bigUnit;									// e.g. "ppm": smaller, right after the value
-		std::vector<std::pair<std::string, std::string>> tiles; // label (subscript digits allowed), value (at most 3)
+		std::vector<std::pair<std::string, std::string>> tiles; // label or "icon:<name>" (e.g. icon:temperature), value (at most 3)
 		std::string footerLeft;									// e.g. "verstuurd 14:10"
 		std::string footerRight;								// e.g. "info"
 	};
@@ -106,6 +106,8 @@ private:
 	 * below the baseline; shortened like Fit() when it is too wide. Uses the current font for the other text.
 	 */
 	void DrawLabel(const std::string &text, int x, int y, int maxWidth);
+	/** A label, or an icon when the text is "icon:<name>" (include/util/icons.hpp); top is used for the icon. */
+	void DrawLabelOrIcon(const std::string &text, int x, int baseline, int top, int maxWidth);
 	int LabelWidth(const std::string &text);
 	int WrapText(const std::string &text, int x, int y, int maxWidth, int lineHeight, int maxY);
 

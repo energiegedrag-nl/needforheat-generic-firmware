@@ -33,12 +33,15 @@ namespace GenericESP32Firmware
     void Initialize(const std::string &deviceTypeName);
 
     /**
-     * Name of the device for people, e.g. "Woonkamermodule", shown large on the provisioning screen: a box for a
-     * participant can hold several CoreInks, each to be connected to its own sensor or BASE. Call before Initialize.
-     * Dutch, like the fallback language of the manuals (devices/<type>/display_names.json, "nl-NL"): the device does
-     * not know its campaign (or a campaign language) before it is activated.
+     * Short name of the device for people, e.g. "Woonkamer" or "P1-lezer": at most about 9 characters, shown in the
+     * header of the provisioning screen next to the firmware version (a box can hold several CoreInks, each for its
+     * own sensor or BASE). The same short name as in needforheat-manuals (devices/<type>/short_names.json). Dutch, the
+     * default language of campaigns: before activation the device does not know its campaign. Call before Initialize.
      */
-    void SetDisplayName(const std::string &displayName);
+    void SetShortName(const std::string &shortName);
+
+    /** Deprecated: use SetShortName. */
+    inline void SetDisplayName(const std::string &displayName) { SetShortName(displayName); }
 
     /**
      * Get the device's service name; prefixe and last 3 octets of Wi-Fi MAC-address.

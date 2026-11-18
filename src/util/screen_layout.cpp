@@ -1,8 +1,10 @@
 #include <util/screen_layout.hpp>
 
 #include <algorithm>
+#include <cstring>
 
 #include <util/fonts/u8g2_fonts.hpp>
+#include <util/icons.hpp>
 
 /*
  * Layout on the 200x200 panel; y values of text are baselines.
@@ -161,6 +163,23 @@ int ScreenLayout::LabelWidth(const std::string &text)
 		}
 	}
 	return width + m_canvas.textWidth(run.c_str());
+}
+
+void ScreenLayout::DrawLabelOrIcon(const std::string &text, int x, int baseline, int top, int maxWidth)
+{
+	constexpr const char *PREFIX = "icon:";
+	if (text.rfind(PREFIX, 0) == 0)
+	{
+		const Icons::Icon *icon = Icons::Find(text.c_str() + std::strlen(PREFIX));
+		if (icon != nullptr && icon->width <= maxWidth)
+		{
+			m_canvas.drawBitmap(x, top, icon->bits, icon->width, icon->height, BLACK);
+			return;
+		}
+		DrawLabel(text.substr(std::strlen(PREFIX)), x, baseline, maxWidth); // unknown icon: its name as text
+		return;
+	}
+	DrawLabel(text, x, baseline, maxWidth);
 }
 
 void ScreenLayout::DrawLabel(const std::string &text, int x, int y, int maxWidth)
@@ -337,16 +356,52 @@ int ScreenLayout::Footer(const std::string &left, const std::string &right)
 	m_canvas.fillRect(0, FOOTER_LINE, W, 2, BLACK);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextColor(BLACK);
+	// Both sides may start with "icon:<name>" (include/util/icons.hpp), followed by a space and text: e.g. the upload
+	// icon and "14:10" on the left, the info icon on the right.
+	auto split = [](const std::string &s, std::string &text) -> const Icons::Icon *
+	{
+		constexpr const char *PREFIX = "icon:";
+		text = s;
+		if (s.rfind(PREFIX, 0) != 0)
+			return nullptr;
+		size_t space = s.find(' ');
+		std::string name = s.substr(std::strlen(PREFIX), space == std::string::npos ? std::string::npos : space - std::strlen(PREFIX));
+		const Icons::Icon *icon = Icons::Find(name.c_str());
+		if (icon != nullptr)
+			text = space == std::string::npos ? "" : s.substr(space + 1);
+		return icon;
+	};
+	auto iconY = [](const Icons::Icon *icon) { return FOOTER_LINE + 2 + (H - FOOTER_LINE - 2 - icon->height) / 2; };
+
 	int rightWidth = 0;
 	if (!right.empty())
 	{
-		std::string fitted = Fit(right, W / 2 - MARGIN);
-		rightWidth = m_canvas.textWidth(fitted.c_str()) + 8;
-		m_canvas.setTextDatum(textdatum_t::baseline_right);
-		m_canvas.drawString(fitted.c_str(), W - MARGIN, FOOTER_BASE);
+		std::string text;
+		const Icons::Icon *icon = split(right, text);
+		int xr = W - MARGIN;
+		if (!text.empty())
+		{
+			std::string fitted = Fit(text, W / 2 - MARGIN);
+			m_canvas.setTextDatum(textdatum_t::baseline_right);
+			m_canvas.drawString(fitted.c_str(), xr, FOOTER_BASE);
+			xr -= m_canvas.textWidth(fitted.c_str()) + (icon != nullptr ? 4 : 0);
+		}
+		if (icon != nullptr)
+		{
+			xr -= icon->width;
+			m_canvas.drawBitmap(xr, iconY(icon), icon->bits, icon->width, icon->height, BLACK);
+		}
+		rightWidth = W - MARGIN - xr + 8;
 	}
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
-	m_canvas.drawString(Fit(left, W - 2 * MARGIN - rightWidth).c_str(), MARGIN, FOOTER_BASE);
+	int x = MARGIN;
+	std::string text;
+	if (const Icons::Icon *icon = split(left, text))
+	{
+		m_canvas.drawBitmap(x, iconY(icon), icon->bits, icon->width, icon->height, BLACK);
+		x += icon->width + 5;
+	}
+	m_canvas.drawString(Fit(text, W - MARGIN - x - rightWidth).c_str(), x, FOOTER_BASE);
 	return FOOTER_LINE;
 }
 
@@ -378,15 +433,31 @@ std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const s
 											 const std::string &displayName, const std::string &version)
 {
 	Begin();
-	// Which device this is (a box can hold several CoreInks), large in the header; what to do in the footer.
-	Header(displayName.empty() ? "Koppelen" : displayName, displayName.empty() ? "via app" : "");
+	// Which device this is (a box can hold several CoreInks) and its firmware version in the header (relevant until
+	// the device is packed); what to do in the footer. Without a short name: the old "Koppelen / via app".
+	// The name matters most: when both do not fit, the version is written compactly ("v1.2.0-rc.6" -> "1.2.0r6").
+	std::string shownVersion = version;
+	if (!displayName.empty())
+	{
+		m_canvas.setFont(m_fonts.text);
+		constexpr int GAP = 8;
+		if (MARGIN + m_canvas.textWidth(displayName.c_str()) + GAP + m_canvas.textWidth(shownVersion.c_str()) > W - MARGIN)
+		{
+			if (!shownVersion.empty() && shownVersion[0] == 'v')
+				shownVersion.erase(0, 1);
+			auto rc = shownVersion.find("-rc.");
+			if (rc != std::string::npos)
+				shownVersion.replace(rc, 4, "r");
+		}
+	}
+	Header(displayName.empty() ? "Koppelen" : displayName, displayName.empty() ? "via app" : shownVersion);
 	// A QR code needs 4 modules of white around it: the header bar above it counts as black.
 	m_canvas.qrcode(payload.c_str(), (W - PROVISIONING_QR_SIZE) / 2, HEADER_H + PROVISIONING_QR_QUIET,
 					PROVISIONING_QR_SIZE);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_center);
 	m_canvas.drawString(Fit(deviceName, W - 2 * MARGIN).c_str(), W / 2, PROVISIONING_NAME_BASE);
-	Footer(displayName.empty() ? "" : "Scan met app", version); // with an rc version the left text may be shortened
+	Footer(displayName.empty() ? "" : "Scan met app", displayName.empty() ? version : "");
 	return "prov:" + payload;
 }
 
@@ -476,7 +547,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	// Main value with its label; the font gets smaller only if the value does not fit.
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
-	DrawLabel(status.bigLabel, MARGIN, STATUS_LABEL_BASE, W - 2 * MARGIN);
+	DrawLabelOrIcon(status.bigLabel, MARGIN, STATUS_LABEL_BASE, HEADER_H + 4, W - 2 * MARGIN);
 	// Value and unit share the baseline; the unit is smaller and right after the value. The value font gets smaller
 	// only when value and unit do not fit.
 	constexpr int UNIT_GAP = 5;
@@ -520,7 +591,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder of W / n.
 			int maxW = (i + 1 == n ? W : tx + tileW) - textX - 2;
 			m_canvas.setFont(m_fonts.text);
-			DrawLabel(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, maxW);
+			DrawLabelOrIcon(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, STATUS_TILES_LINE + 4, maxW);
 			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})
 			{
 				m_canvas.setFont(font);

@@ -39,9 +39,9 @@ namespace
 		s.bigLabel = label;
 		s.bigValue = value;
 		s.bigUnit = unit;
-		s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
-		s.footerLeft = "verstuurd 14:10";
-		s.footerRight = "info";
+		s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
+		s.footerLeft = "icon:uploaded 14:10";
+		s.footerRight = "icon:info";
 		return s;
 	}
 
@@ -58,7 +58,11 @@ namespace
 	{
 		static const std::vector<Sample> samples = {
 			{"01-provisioning-qr", [](ScreenLayout &l)
-			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "Woonkamermodule", "v1.2.0"); }},
+			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "Woonkamer", "v1.2.0-rc.6"); }},
+			{"01b-provisioning-qr-release", [](ScreenLayout &l)
+			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "Woonkamer", "v1.2.0"); }},
+			{"01c-provisioning-qr-p1", [](ScreenLayout &l)
+			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "P1-lezer", "v1.1.0-rc.2"); }},
 			{"02-steps-wifi", [](ScreenLayout &l)
 			 { l.DrawSteps("Koppelen", "2 van 3", ProvisioningSteps(0), "Verbinden met wifi (tot 30 s)...",
 						   "Houd de app open"); }},
@@ -85,9 +89,9 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}, {"pers.", "2"}};
-				 s.footerLeft = "verstuurd 14:10";
-				 s.footerRight = "info";
+				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}, {"icon:person", "2"}};
+				 s.footerLeft = "icon:uploaded 14:10";
+				 s.footerRight = "icon:info";
 				 l.DrawStatus(s);
 			 }},
 			{"08-status-p1", [](ScreenLayout &l)
@@ -97,12 +101,12 @@ namespace
 				 s.badge = "TEST";
 				 s.device = "P1";
 				 s.battery = 4;
-				 s.bigLabel = "stroom";
+				 s.bigLabel = "icon:power";
 				 s.bigValue = "0,42";
 				 s.bigUnit = "kW";
-				 s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
-				 s.footerLeft = "verstuurd di"; // last upload earlier this week
-				 s.footerRight = "info";
+				 s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
+				 s.footerLeft = "icon:uploaded di"; // last upload earlier this week
+				 s.footerRight = "icon:info";
 				 l.DrawStatus(s);
 			 }},
 			{"09-status-offline", [](ScreenLayout &l)
@@ -112,11 +116,11 @@ namespace
 				 s.wifiConnected = false;
 				 s.device = "P1";
 				 s.battery = 3;
-				 s.bigLabel = "stroom";
+				 s.bigLabel = "icon:power";
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
-				 s.tiles = {{"gas m³", "0,0"}, {"DSMR", "5.0"}};
-				 s.footerLeft = "128 onverzonden"; // DisplayStatus clears footerRight then
+				 s.tiles = {{"icon:gas", "0,0 m³"}, {"DSMR", "5.0"}};
+				 s.footerLeft = "icon:not_uploaded 128 metingen"; // DisplayStatus clears footerRight then
 				 s.footerRight = "";
 				 l.DrawStatus(s);
 			 }},
@@ -140,9 +144,9 @@ namespace
 			// P1-BASE v3 with the P1 reader firmware (needforheat-p1-reader-firmware, src/p1.cpp): screen 8 (P1 overview)
 			// and screen 9 (P1 cable diagnosis), with the texts that firmware uses; supply indicator in the footer.
 			{"16-p1base-overview", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("stroom", "0,42", "kW", {{"DSMR", "5.0"}, {"lezer", "aan"}, {"laden", "120mA"}}, "P1")); }},
+			 { l.DrawStatus(P1Base("icon:power", "0,42", "kW", {{"DSMR", "5.0"}, {"lezer", "aan"}, {"icon:charging", "120mA"}}, "P1")); }},
 			{"17-p1base-dsmr3-usb", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("stroom", "-1,85", "kW", {{"DSMR", "3.0"}, {"lezer", "uit"}, {"laden", "uit"}}, "USB")); }},
+			 { l.DrawStatus(P1Base("icon:power", "-1,85", "kW", {{"DSMR", "3.0"}, {"lezer", "uit"}, {"icon:charging", "uit"}}, "USB")); }},
 			{"18-p1base-no-data", [](ScreenLayout &l)
 			 { l.DrawStatus(P1Base("geen data", "5,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
 			{"19-p1base-dsmr2-on-battery", [](ScreenLayout &l)
@@ -160,7 +164,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}};
+				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}};
 				 s.footerLeft = "opladen: ±18 u"; // BatteryMonitor::FooterText, Level::Day
 				 l.DrawStatus(s);
 			 }},
@@ -173,7 +177,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}};
+				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}};
 				 s.footerLeft = "laad nu op: ±5 u"; // Level::Today
 				 l.DrawStatus(s);
 			 }},

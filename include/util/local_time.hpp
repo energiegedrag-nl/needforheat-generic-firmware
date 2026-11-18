@@ -173,19 +173,19 @@ namespace LocalTime
 		return weekday ? std::string(WeekdayNl(local)) + " " + date : date;
 	}
 
-	/** Footer text for the last upload; the footer holds about 15 characters next to "info".
-	 *  Today: "verstuurd 14:10"; within the last 6 days: "verstuurd di"; older: "verstuurd 11 nov". */
+	/** When the last upload was, for the footer next to the upload icon: today "14:10", within the last 6 days the
+	 *  weekday ("di"), older the date ("11 nov"). */
 	inline std::string SentNl(const struct tm &sent, const struct tm &today, bool todayKnown)
 	{
 		if (todayKnown && sent.tm_year == today.tm_year && sent.tm_yday == today.tm_yday)
 		{
 			char text[16];
 			std::snprintf(text, sizeof(text), "%02d:%02d", sent.tm_hour, sent.tm_min);
-			return std::string("verstuurd ") + text;
+			return text;
 		}
 		long days = todayKnown ? static_cast<long>(DaysFromCivil(today.tm_year + 1900, today.tm_mon + 1, today.tm_mday) -
 												   DaysFromCivil(sent.tm_year + 1900, sent.tm_mon + 1, sent.tm_mday))
 							   : 99;
-		return std::string("verstuurd ") + (days >= 1 && days <= 6 ? WeekdayNl(sent) : DateNl(sent, false));
+		return days >= 1 && days <= 6 ? std::string(WeekdayNl(sent)) : DateNl(sent, false);
 	}
 } // namespace LocalTime
