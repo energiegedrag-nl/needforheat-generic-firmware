@@ -47,7 +47,8 @@ public:
 		std::string date;										// e.g. "wo 18 nov" (not a clock: the screen does not refresh every minute); empty: not shown
 		bool wifiConnected = true;
 		std::string badge;										// e.g. "TEST" for a test server; empty: none
-		std::string device;										// short device label in the header, e.g. "P1"
+		std::string device;										// not shown on the overview (since 18-11); kept for callers
+		int battery = -1;										// header icon: 0..4 bars, 5 USB power; -1 none
 		std::string bigLabel;									// e.g. "CO₂" (subscript digits allowed)
 		std::string bigValue;									// e.g. "612"
 		std::string bigUnit;									// e.g. "ppm": smaller, right after the value
@@ -82,7 +83,7 @@ public:
 	std::string DrawBlank();
 	std::string DrawQR(const std::string &payload, int padding, const std::string &text);
 	std::string DrawProvisioningQR(const std::string &payload, const std::string &deviceName,
-								   const std::string &footerLeft, const std::string &footerRight);
+								   const std::string &displayName, const std::string &version);
 	std::string DrawSteps(const std::string &title, const std::string &titleRight, const std::vector<Step> &steps,
 						  const std::string &message, const std::string &footer);
 	std::string DrawMessage(const std::string &title, const std::vector<std::string> &paragraphs,
@@ -92,7 +93,10 @@ public:
 
 private:
 	void Begin();
-	void Header(const std::string &left, const std::string &right, int leftIndent = 0, const std::string &badge = "");
+	void Header(const std::string &left, const std::string &right, int leftIndent = 0, const std::string &badge = "",
+				int battery = -1);
+	/** Battery icon (white on the black header), 0..4 bars or 5 for USB power; returns its width. */
+	int BatteryIcon(int x, int battery);
 	/** Footer bar; returns the y of its top line (H when there is no footer). */
 	int Footer(const std::string &left, const std::string &right);
 	void WifiSymbol(int x, int y, bool connected, uint32_t colour);

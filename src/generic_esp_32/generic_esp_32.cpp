@@ -33,6 +33,7 @@
 #include <util/local_time.hpp>
 #include <specific_m5coreink/powerpin.h>
 #include <specific_m5coreink/rtc.h>
+#include <specific_m5coreink/battery_voltage.hpp>
 #include <scheduler.hpp>
 #include <generic_tasks.hpp>
 #include <measurements.hpp>
@@ -112,6 +113,7 @@ namespace GenericESP32Firmware
     namespace
     {
         static std::string s_deviceTypeName;
+        static std::string s_displayName; // for people, e.g. "Woonkamermodule"; empty: none set
 
         static EventGroupHandle_t s_wifiEventGroup;
         static bool s_wifiInitialized = false;
@@ -752,7 +754,7 @@ namespace GenericESP32Firmware
 
 #if M5STACK_COREINK
             auto qrCodePayload = GetProvisioningQrPayload();
-            s_screen.DisplayProvisioningQR(qrCodePayload, GetDeviceServiceName(), s_deviceTypeName,
+            s_screen.DisplayProvisioningQR(qrCodePayload, GetDeviceServiceName(), s_displayName,
                                            esp_ota_get_app_description()->version);
 
             s_powerOffTimeout.Start();
@@ -935,6 +937,11 @@ namespace GenericESP32Firmware
         }
     } // namespace
 
+    void SetDisplayName(const std::string &displayName)
+    {
+        s_displayName = displayName;
+    }
+
     void Initialize(const std::string &deviceTypeName)
     {
 #ifdef M5STACK_COREINK
@@ -958,6 +965,9 @@ namespace GenericESP32Firmware
 #ifdef M5STACK_COREINK
         rtc_initialize();
         rtc_syncronize_sys_time();
+
+        // Resting voltage before Wi-Fi is on: the best estimate of the charge (BatteryMonitor).
+        M5CoreInkSpecific::BatteryAtBoot();
 #endif // M5STACK_COREINK
 
         auto err = InitializeWireless();
@@ -1133,10 +1143,41 @@ namespace GenericESP32Firmware
         struct tm today;
         LocalTimeForScreen(now, today); // the clock runs in UTC; people read local time
         bool synchronised = today.tm_year + 1900 >= 2024;
+
+        // Battery: icon in the header; a warning in the footer when charging is needed soon; a full screen when the
+        // battery is nearly or completely empty (e-ink keeps that image when the device stops).
+        BatteryMonitor::Reading battery;
+        bool haveBattery = M5CoreInkSpecific::GetBatteryReading(battery);
+        if (haveBattery)
+        {
+            if (status.battery < 0)
+                status.battery = battery.usb ? 5 : battery.bars;
+            if (battery.level == BatteryMonitor::Level::Critical)
+            {
+                s_screen.DisplayMessage("Batterij bijna leeg",
+                                        {"Sluit de USB-voeding aan.", "Het apparaat meet daarna gewoon verder."},
+                                        "lading " + std::to_string(static_cast<int>(battery.soc * 100 + 0.5)) + "%");
+                return;
+            }
+            if (battery.level == BatteryMonitor::Level::Empty)
+            {
+                s_screen.DisplayMessage("Batterij leeg",
+                                        {"Het apparaat stopt met meten.", "Sluit de USB-voeding aan; daarna meet het vanzelf verder."},
+                                        "");
+                return;
+            }
+        }
+
         if (status.badge.empty())
             status.badge = ServerBadge();
         if (status.date.empty() && synchronised)
             status.date = LocalTime::DateNl(today, status.badge.empty()); // with a TEST badge the weekday does not fit
+        std::string batteryWarning = haveBattery ? BatteryMonitor::FooterText(battery) : "";
+        if (status.footerLeft.empty() && !batteryWarning.empty())
+        {
+            status.footerLeft = batteryWarning;
+            status.footerRight.clear(); // the warning gets the whole footer
+        }
         if (status.footerLeft.empty())
         {
             auto pending = SecureUpload::PersistentStore::GetInstance().Pending();

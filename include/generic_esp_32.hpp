@@ -33,6 +33,14 @@ namespace GenericESP32Firmware
     void Initialize(const std::string &deviceTypeName);
 
     /**
+     * Name of the device for people, e.g. "Woonkamermodule", shown large on the provisioning screen: a box for a
+     * participant can hold several CoreInks, each to be connected to its own sensor or BASE. Call before Initialize.
+     * Dutch, like the fallback language of the manuals (devices/<type>/display_names.json, "nl-NL"): the device does
+     * not know its campaign (or a campaign language) before it is activated.
+     */
+    void SetDisplayName(const std::string &displayName);
+
+    /**
      * Get the device's service name; prefixe and last 3 octets of Wi-Fi MAC-address.
      *
      * @returns The device's service name.

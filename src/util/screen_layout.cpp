@@ -254,16 +254,54 @@ void ScreenLayout::WifiSymbol(int x, int y, bool connected, uint32_t colour)
 	}
 }
 
-void ScreenLayout::Header(const std::string &left, const std::string &right, int leftIndent, const std::string &badge)
+int ScreenLayout::BatteryIcon(int x, int battery)
+{
+	// Body 17 x 10 with a nub on the right, centred in the header bar.
+	constexpr int BODY_W = 17, BODY_H = 10, NUB_W = 2, NUB_H = 4;
+	int y = (HEADER_H - BODY_H) / 2;
+	m_canvas.drawRect(x, y, BODY_W, BODY_H, WHITE);
+	m_canvas.fillRect(x + BODY_W, y + (BODY_H - NUB_H) / 2, NUB_W, NUB_H, WHITE);
+	if (battery >= 5)
+	{
+		// USB power: full body with a black lightning bolt.
+		m_canvas.fillRect(x + 1, y + 1, BODY_W - 2, BODY_H - 2, WHITE);
+		m_canvas.fillTriangle(x + 10, y + 1, x + 5, y + 5, x + 9, y + 5, BLACK);
+		m_canvas.fillTriangle(x + 8, y + 4, x + 12, y + 4, x + 7, y + 8, BLACK);
+	}
+	else
+	{
+		// Bars of 2 px with 1 px between them, inside a 1 px margin.
+		for (int i = 0; i < std::max(0, std::min(4, battery)); i++)
+			m_canvas.fillRect(x + 2 + i * 3 + (i > 0 ? i : 0), y + 2, 2, BODY_H - 4, WHITE);
+	}
+	return BODY_W + NUB_W;
+}
+
+void ScreenLayout::Header(const std::string &left, const std::string &right, int leftIndent, const std::string &badge,
+						  int battery)
 {
 	m_canvas.fillRect(0, 0, W, HEADER_H, BLACK);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextColor(WHITE);
 	constexpr int GAP = 8;
+	constexpr int ICON_W = 19; // BatteryIcon
 
 	// Left text first (it matters most), the right text gets the rest of the bar, the badge sits after the left text.
+	// The battery icon sits just left of the right text. When the date, a badge, the icon and the right text (device
+	// label) do not fit together, the right text is left out: it matters least.
 	int x = MARGIN + leftIndent;
-	int rightNeeds = right.empty() ? 0 : std::min(m_canvas.textWidth(right.c_str()), W / 2) + GAP;
+	int rightTextW = right.empty() ? 0 : std::min(m_canvas.textWidth(right.c_str()), W / 2);
+	int iconNeeds = battery >= 0 ? ICON_W + GAP / 2 : 0;
+	bool showRight = !right.empty();
+	if (showRight && (battery >= 0 || !badge.empty()))
+	{
+		int leftW = left.empty() ? 0 : m_canvas.textWidth(left.c_str()) + GAP;
+		int badgeW = badge.empty() ? 0 : m_canvas.textWidth(badge.c_str()) + 10 + GAP;
+		showRight = x + leftW + badgeW + iconNeeds + rightTextW <= W - MARGIN;
+	}
+	int rightNeeds = (showRight ? rightTextW + GAP : 0) + iconNeeds;
+	if (battery >= 0)
+		BatteryIcon(W - MARGIN - (showRight ? rightTextW + GAP / 2 : 0) - ICON_W, battery);
 	if (!left.empty())
 	{
 		std::string fitted = Fit(left, W - MARGIN - x - rightNeeds);
@@ -283,10 +321,10 @@ void ScreenLayout::Header(const std::string &left, const std::string &right, int
 		m_canvas.setTextColor(WHITE);
 		x += boxW + GAP;
 	}
-	if (!right.empty())
+	if (showRight)
 	{
 		m_canvas.setTextDatum(textdatum_t::baseline_right);
-		m_canvas.drawString(Fit(right, W - MARGIN - x).c_str(), W - MARGIN, HEADER_BASE);
+		m_canvas.drawString(Fit(right, W - MARGIN - x - iconNeeds).c_str(), W - MARGIN, HEADER_BASE);
 	}
 	m_canvas.setTextColor(BLACK);
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
@@ -337,17 +375,18 @@ std::string ScreenLayout::DrawQR(const std::string &payload, int padding, const 
 }
 
 std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const std::string &deviceName,
-											 const std::string &footerLeft, const std::string &footerRight)
+											 const std::string &displayName, const std::string &version)
 {
 	Begin();
-	Header("Koppelen", "via app");
+	// Which device this is (a box can hold several CoreInks), large in the header; what to do in the footer.
+	Header(displayName.empty() ? "Koppelen" : displayName, displayName.empty() ? "via app" : "");
 	// A QR code needs 4 modules of white around it: the header bar above it counts as black.
 	m_canvas.qrcode(payload.c_str(), (W - PROVISIONING_QR_SIZE) / 2, HEADER_H + PROVISIONING_QR_QUIET,
 					PROVISIONING_QR_SIZE);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_center);
 	m_canvas.drawString(Fit(deviceName, W - 2 * MARGIN).c_str(), W / 2, PROVISIONING_NAME_BASE);
-	Footer(footerLeft, footerRight);
+	Footer(displayName.empty() ? "" : "Scan met app", version); // with an rc version the left text may be shortened
 	return "prov:" + payload;
 }
 
@@ -430,7 +469,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	Begin();
 
 	// Header: Wi-Fi symbol and date left, badge (e.g. TEST) in the middle, device label right.
-	Header(status.date, status.device, 22, status.badge);
+	Header(status.date, "", 22, status.badge, status.battery); // no device label: clear from the screen in use
 	WifiSymbol(MARGIN - 1, HEADER_BASE + 1, status.wifiConnected, WHITE);
 	int bottom = Footer(status.footerLeft, status.footerRight);
 
