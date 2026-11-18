@@ -35,7 +35,7 @@ ICONS = {
     "gas_meter": ("gas_meter-fill", "f8b264026e55375add27cb3e31da60ee653ce5eea9603be54291b7ee4ad29819"),
     "not_uploaded": ("cloud_off-fill", "9c5597e012365098b0203e9007eb631329cb1b1e3c67368675838e29455b7a34"),  # measurements waiting
     "info": ("info-fill", "4158bdc6accf8323ff4ab315cace65ce2dd75e04f07725395171ce4c7c0d2b3e"),  # more information (button)
-    "charging": ("battery_charging_full-fill", "9982d7932fbb5932585430391b087b98d2f5208b8de52647f8d5f7cf889402d1"),  # BASE charging
+    "charging": ("power-fill", "8d37a03610dc74dd4ac0f6c570b667bea70152bfbffb7c046bd1079f37cf426b"),  # plug: the BASE is charging
     "uploaded": ("cloud_done-fill", "7acf39049e5d2eaafd5479a8cf2028564289f842f827b64091fcc9bc4597de07"),  # last upload succeeded (footer, next to the time)
 }
 
