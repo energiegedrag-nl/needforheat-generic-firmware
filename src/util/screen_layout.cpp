@@ -42,7 +42,21 @@ namespace
 	const lgfx::U8g2font HELV_B24(u8g2_font_helvB24_tf);
 	const lgfx::U8g2font FUB49(u8g2_font_fub49_tn);
 	const lgfx::U8g2font FUB42(u8g2_font_fub42_tn);
-	const lgfx::U8g2font SUBSCRIPT(u8g2_font_helvB10_tn); // digits only, for "CO₂" in labels
+	// Subscript digits (for "CO₂") as own 6 x 9 bitmaps, drawn pixel by pixel in the text colour without a background.
+	// The U8g2 digits font drew a filled box white on black on the device (LovyanGFX 0.x), though not on the host.
+	constexpr int SUB_W = 6, SUB_H = 9;
+	const uint8_t SUB_DIGITS[10][SUB_H] = {
+		{0x78, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0x78}, // 0
+		{0x30, 0x70, 0xf0, 0x30, 0x30, 0x30, 0x30, 0x30, 0xfc}, // 1
+		{0x78, 0xcc, 0x0c, 0x0c, 0x18, 0x30, 0x60, 0xc0, 0xfc}, // 2
+		{0x78, 0xcc, 0x0c, 0x38, 0x0c, 0x0c, 0x0c, 0xcc, 0x78}, // 3
+		{0x18, 0x38, 0x78, 0xd8, 0xd8, 0xfc, 0x18, 0x18, 0x18}, // 4
+		{0xfc, 0xc0, 0xc0, 0xf8, 0x0c, 0x0c, 0x0c, 0xcc, 0x78}, // 5
+		{0x78, 0xcc, 0xc0, 0xf8, 0xcc, 0xcc, 0xcc, 0xcc, 0x78}, // 6
+		{0xfc, 0x0c, 0x18, 0x18, 0x30, 0x30, 0x60, 0x60, 0x60}, // 7
+		{0x78, 0xcc, 0xcc, 0x78, 0xcc, 0xcc, 0xcc, 0xcc, 0x78}, // 8
+		{0x78, 0xcc, 0xcc, 0xcc, 0x7c, 0x0c, 0x0c, 0xcc, 0x78}, // 9
+	};
 	constexpr int SUBSCRIPT_DROP = 4;					  // baseline of a subscript below the text baseline
 #ifdef SCREEN_LAYOUT_FONT_COMPARISON
 	const lgfx::U8g2font NCEN_B14(u8g2_font_ncenB14_tf);
@@ -142,7 +156,6 @@ std::string ScreenLayout::Fit(const std::string &text, int maxWidth)
 
 int ScreenLayout::LabelWidth(const std::string &text)
 {
-	const lgfx::IFont *font = m_canvas.getFont();
 	int width = 0;
 	std::string run;
 	for (size_t i = 0; i < text.size(); i++)
@@ -151,10 +164,7 @@ int ScreenLayout::LabelWidth(const std::string &text)
 		{
 			width += m_canvas.textWidth(run.c_str());
 			run.clear();
-			char digit[2] = {static_cast<char>('0' + (static_cast<unsigned char>(text[i + 2]) - 0x80)), 0};
-			m_canvas.setFont(&SUBSCRIPT);
-			width += m_canvas.textWidth(digit) + 1;
-			m_canvas.setFont(font);
+			width += SUB_W + 2;
 			i += 2;
 		}
 		else
@@ -191,7 +201,6 @@ void ScreenLayout::DrawLabel(const std::string &text, int x, int y, int maxWidth
 		m_canvas.drawString(Fit(WithoutSubscripts(text), maxWidth).c_str(), x, y);
 		return;
 	}
-	const lgfx::IFont *font = m_canvas.getFont();
 	std::string run;
 	auto flush = [&]()
 	{
@@ -204,11 +213,14 @@ void ScreenLayout::DrawLabel(const std::string &text, int x, int y, int maxWidth
 		if (SubscriptAt(text, i) > 0)
 		{
 			flush();
-			char digit[2] = {static_cast<char>('0' + (static_cast<unsigned char>(text[i + 2]) - 0x80)), 0};
-			m_canvas.setFont(&SUBSCRIPT);
-			m_canvas.drawString(digit, x + 1, y + SUBSCRIPT_DROP);
-			x += m_canvas.textWidth(digit) + 1;
-			m_canvas.setFont(font);
+			int d = static_cast<unsigned char>(text[i + 2]) - 0x80;
+			uint32_t colour = m_canvas.getTextStyle().fore_rgb888 != 0 ? WHITE : BLACK;
+			int top = y + SUBSCRIPT_DROP - SUB_H + 1;
+			for (int row = 0; row < SUB_H; row++)
+				for (int col = 0; col < SUB_W; col++)
+					if (SUB_DIGITS[d][row] & (0x80 >> col))
+						m_canvas.drawPixel(x + 1 + col, top + row, colour);
+			x += SUB_W + 2;
 			i += 2;
 		}
 		else
