@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <util/local_time.hpp>
 
 #include <driver/gpio.h>
@@ -99,6 +100,20 @@ namespace GenericESP32Firmware
      * when footerLeft is empty, the time of the last upload or the number of measurements not sent yet.
      */
     void DisplayStatus(Screen::Status status);
+
+    /** A message screen (title, wrapped paragraphs, footer), e.g. for progress of a device action. */
+    void DisplayMessage(const std::string &title, const std::vector<std::string> &paragraphs, const std::string &footer);
+
+    /**
+     * A deliberate action that is only possible **before provisioning**, e.g. calibrating a sensor outdoors.
+     * On the provisioning screen: hold the dial pressed for 10 s (GPIO 38), read the question, and turn the dial down
+     * (GPIO 39) within 30 s to confirm. Refused on USB power (the action is meant for battery power, e.g. in a box
+     * outdoors, not at a computer). During the action the provisioning power-off timeout is paused; afterwards the
+     * provisioning screen returns. run() is called in its own task and may take long (it shows its own progress with
+     * DisplayMessage). Not shown on the screen: participants receive provisioned devices and cannot reach it.
+     * Call before Initialize.
+     */
+    void SetPreProvisioningAction(const std::string &title, const std::string &question, void (*run)());
 
     /** Draw the last overview again with fresh upload state (called after each upload); nothing before the first. */
     void RefreshStatus();
