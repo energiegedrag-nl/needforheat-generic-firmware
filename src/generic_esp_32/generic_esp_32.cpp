@@ -778,10 +778,17 @@ namespace GenericESP32Firmware
                     ShowProvisioningQR();
                 return;
             }
-            s_screen.DisplayMessage(s_preAction.title, {s_preAction.question, "Draai het wieltje omlaag om te bevestigen."},
-                                    std::to_string(PRE_ACTION_CONFIRM_S) + " s");
             s_preConfirmUntil = xTaskGetTickCount() + pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000);
-            vTaskDelay(pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000));
+            // Count down in steps of 5 s (each step is a fast e-ink refresh); stop as soon as it is confirmed.
+            constexpr int STEP_S = 5;
+            for (int left = PRE_ACTION_CONFIRM_S; left > 0; left -= STEP_S)
+            {
+                if (s_preConfirmUntil == 0 || s_preActionRunning || !s_provisioningScreen)
+                    break;
+                s_screen.DisplayMessage(s_preAction.title, {s_preAction.question, "Draai het wieltje omlaag om te bevestigen."},
+                                        "nog " + std::to_string(left) + " s");
+                vTaskDelay(pdMS_TO_TICKS(STEP_S * 1000));
+            }
             if (s_preConfirmUntil != 0 && s_provisioningScreen && !s_preActionRunning)
             {
                 s_preConfirmUntil = 0; // not confirmed: back to the provisioning screen
