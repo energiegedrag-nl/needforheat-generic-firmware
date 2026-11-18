@@ -335,10 +335,11 @@ void ScreenLayout::Header(const std::string &left, const std::string &right, int
 		BatteryIcon(W - MARGIN - (showRight ? rightTextW + GAP / 2 : 0) - ICON_W, battery);
 	if (!left.empty())
 	{
-		std::string fitted = Fit(left, W - MARGIN - x - rightNeeds);
-		m_canvas.setTextDatum(textdatum_t::baseline_left);
-		m_canvas.drawString(fitted.c_str(), x, HEADER_BASE);
-		x += m_canvas.textWidth(fitted.c_str()) + GAP;
+		// DrawLabel, not drawString: titles like "CO₂ kalibreren" have subscript digits the font lacks (they were
+		// missing in the header). It draws in the current text colour (white here).
+		int maxLeft = W - MARGIN - x - rightNeeds;
+		DrawLabel(left, x, HEADER_BASE, maxLeft);
+		x += std::min(LabelWidth(left), maxLeft) + GAP;
 	}
 	if (!badge.empty())
 	{
