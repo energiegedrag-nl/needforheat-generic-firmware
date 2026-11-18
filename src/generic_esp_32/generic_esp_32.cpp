@@ -115,6 +115,22 @@ namespace GenericESP32Firmware
         static std::string s_deviceTypeName;
         static std::string s_shortName; // for people, e.g. "Woonkamer"; empty: none set
 
+#ifdef M5STACK_COREINK
+        // Pre-provisioning action (SetPreProvisioningAction).
+        struct PreProvisioningAction
+        {
+            std::string title;
+            std::string question;
+            void (*run)() = nullptr;
+        };
+        static PreProvisioningAction s_preAction;
+        static volatile bool s_provisioningScreen = false; // the provisioning QR is shown and the device is not provisioned
+        static volatile bool s_preActionRunning = false;
+        static volatile TickType_t s_preConfirmUntil = 0; // confirmation possible until this tick; 0: not asked
+        static std::string s_provisioningQrPayload;
+        constexpr int PRE_ACTION_CONFIRM_S = 30;
+#endif // M5STACK_COREINK
+
         static EventGroupHandle_t s_wifiEventGroup;
         static bool s_wifiInitialized = false;
         static int s_wifiConnectRetries = 0;
@@ -726,6 +742,85 @@ namespace GenericESP32Firmware
             return err;
         }
 
+#if M5STACK_COREINK
+        void ShowProvisioningQR()
+        {
+            s_screen.DisplayProvisioningQR(s_provisioningQrPayload, GetDeviceServiceName(), s_shortName,
+                                           esp_ota_get_app_description()->version);
+        }
+
+        void PreActionTask(void *)
+        {
+            s_powerOffTimeout.Cancel(); // the action may take long (e.g. half an hour outdoors)
+            if (s_preAction.run != nullptr)
+                s_preAction.run();
+            s_preActionRunning = false;
+            if (s_provisioningScreen)
+            {
+                ShowProvisioningQR();
+                s_powerOffTimeout.Start();
+            }
+            vTaskDelete(nullptr);
+        }
+
+        /** Dial held pressed for 10 s on the provisioning screen: ask for confirmation. */
+        void PreActionAsk()
+        {
+            if (!s_provisioningScreen || s_preActionRunning || s_preAction.run == nullptr)
+                return;
+            BatteryMonitor::Reading battery;
+            if (M5CoreInkSpecific::GetBatteryReading(battery) && battery.usb)
+            {
+                s_screen.DisplayMessage(s_preAction.title,
+                                        {"Niet aan USB: haal de kabel los.", "Dit doe je op batterij, bijvoorbeeld buiten in een doos."}, "");
+                vTaskDelay(pdMS_TO_TICKS(10 * 1000));
+                if (s_provisioningScreen && !s_preActionRunning)
+                    ShowProvisioningQR();
+                return;
+            }
+            s_screen.DisplayMessage(s_preAction.title, {s_preAction.question, "Draai het wieltje omlaag om te bevestigen."},
+                                    std::to_string(PRE_ACTION_CONFIRM_S) + " s");
+            s_preConfirmUntil = xTaskGetTickCount() + pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000);
+            vTaskDelay(pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000));
+            if (s_preConfirmUntil != 0 && s_provisioningScreen && !s_preActionRunning)
+            {
+                s_preConfirmUntil = 0; // not confirmed: back to the provisioning screen
+                ShowProvisioningQR();
+            }
+        }
+
+        /** Dial turned down: confirms, if asked within the last 30 s. */
+        void PreActionConfirm()
+        {
+            if (!s_provisioningScreen || s_preActionRunning || s_preConfirmUntil == 0 ||
+                static_cast<int32_t>(s_preConfirmUntil - xTaskGetTickCount()) < 0)
+                return;
+            s_preConfirmUntil = 0;
+            s_preActionRunning = true;
+            if (xTaskCreatePinnedToCore(PreActionTask, "PreProvisioningAction", 6144, nullptr, 2, nullptr, APP_CPU_NUM) != pdPASS)
+                s_preActionRunning = false;
+        }
+
+        void StartPreProvisioningButtons()
+        {
+            if (s_preAction.run == nullptr)
+                return;
+            for (auto pin : {GPIO_NUM_38, GPIO_NUM_39})
+            {
+                gpio_config_t config = {};
+                config.intr_type = GPIO_INTR_NEGEDGE;
+                config.mode = GPIO_MODE_INPUT;
+                config.pin_bit_mask = 1ULL << pin;
+                config.pull_up_en = GPIO_PULLUP_ENABLE;
+                gpio_config(&config);
+            }
+            // Long press (10 s) on the dial asks; a short turn down confirms. After provisioning the presence menu
+            // (if any) registers these pins again and takes over.
+            Buttons::ButtonPressHandler::AddButton(GPIO_NUM_38, "Pre-provisioning action", 0, nullptr, PreActionAsk);
+            Buttons::ButtonPressHandler::AddButton(GPIO_NUM_39, "Pre-provisioning confirm", 0, PreActionConfirm, nullptr);
+        }
+#endif // M5STACK_COREINK
+
         /**
          * Start provisioning based on defined configuration.
          *
@@ -753,9 +848,10 @@ namespace GenericESP32Firmware
             }
 
 #if M5STACK_COREINK
-            auto qrCodePayload = GetProvisioningQrPayload();
-            s_screen.DisplayProvisioningQR(qrCodePayload, GetDeviceServiceName(), s_shortName,
-                                           esp_ota_get_app_description()->version);
+            s_provisioningQrPayload = GetProvisioningQrPayload();
+            ShowProvisioningQR();
+            s_provisioningScreen = true;
+            StartPreProvisioningButtons();
 
             s_powerOffTimeout.Start();
 #endif // M5STACK_COREINK
@@ -796,6 +892,10 @@ namespace GenericESP32Firmware
 
             // Wait until Wi-Fi connection is made.
             xEventGroupWaitBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
+#if M5STACK_COREINK
+            s_provisioningScreen = false; // no pre-provisioning action any more
+            s_preConfirmUntil = 0;
+#endif // M5STACK_COREINK
 
             // WiFi was initialized during provisioning.
             s_wifiInitialized = true;
@@ -941,6 +1041,20 @@ namespace GenericESP32Firmware
     {
         s_shortName = shortName;
     }
+
+#ifdef M5STACK_COREINK
+    void SetPreProvisioningAction(const std::string &title, const std::string &question, void (*run)())
+    {
+        s_preAction.title = title;
+        s_preAction.question = question;
+        s_preAction.run = run;
+    }
+
+    void DisplayMessage(const std::string &title, const std::vector<std::string> &paragraphs, const std::string &footer)
+    {
+        s_screen.DisplayMessage(title, paragraphs, footer);
+    }
+#endif // M5STACK_COREINK
 
     void Initialize(const std::string &deviceTypeName)
     {
