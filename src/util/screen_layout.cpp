@@ -380,7 +380,22 @@ std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const s
 	Begin();
 	// Which device this is (a box can hold several CoreInks) and its firmware version in the header (relevant until
 	// the device is packed); what to do in the footer. Without a short name: the old "Koppelen / via app".
-	Header(displayName.empty() ? "Koppelen" : displayName, displayName.empty() ? "via app" : version);
+	// The name matters most: when both do not fit, the version is written compactly ("v1.2.0-rc.6" -> "1.2.0r6").
+	std::string shownVersion = version;
+	if (!displayName.empty())
+	{
+		m_canvas.setFont(m_fonts.text);
+		constexpr int GAP = 8;
+		if (MARGIN + m_canvas.textWidth(displayName.c_str()) + GAP + m_canvas.textWidth(shownVersion.c_str()) > W - MARGIN)
+		{
+			if (!shownVersion.empty() && shownVersion[0] == 'v')
+				shownVersion.erase(0, 1);
+			auto rc = shownVersion.find("-rc.");
+			if (rc != std::string::npos)
+				shownVersion.replace(rc, 4, "r");
+		}
+	}
+	Header(displayName.empty() ? "Koppelen" : displayName, displayName.empty() ? "via app" : shownVersion);
 	// A QR code needs 4 modules of white around it: the header bar above it counts as black.
 	m_canvas.qrcode(payload.c_str(), (W - PROVISIONING_QR_SIZE) / 2, HEADER_H + PROVISIONING_QR_QUIET,
 					PROVISIONING_QR_SIZE);
