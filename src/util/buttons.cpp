@@ -121,6 +121,10 @@ namespace Buttons
                                               APP_CPU_NUM);
                 if (err != pdPASS)
                     ESP_LOGE(TAG, "An error occured when starting button press handler task");
+
+                // One queue and one handler task for all buttons. Without this, every AddButton() made a new queue
+                // and task, and the tasks of earlier buttons kept waiting on a queue that no longer got events.
+                s_initialized = true;
             }
         } // namespace
 
