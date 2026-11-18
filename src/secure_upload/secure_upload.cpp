@@ -13,6 +13,7 @@
 
 #include <generic_esp_32.hpp>
 #include <persistent_store.hpp>
+#include <util/upload_policy.hpp>
 
 constexpr const char *TAG = "Secure upload";
 
@@ -52,15 +53,6 @@ namespace SecureUpload
 			gmtime_r(&timestamp, &utc);
 			int year = utc.tm_year + 1900;
 			return year >= buildYear - 1 && year <= buildYear + 10;
-		}
-
-		/**
-		 * Retry later only for failures that may go away: no connection, server errors, timeouts, rate limits.
-		 * Other 4xx answers will not change by retrying.
-		 */
-		bool IsRetryable(int statusCode)
-		{
-			return statusCode <= 0 || statusCode >= 500 || statusCode == 408 || statusCode == 429;
 		}
 
 		/**
@@ -149,7 +141,7 @@ namespace SecureUpload
 						 static_cast<unsigned>(items.size()), static_cast<unsigned>(store.Pending()));
 				continue;
 			}
-			if (!IsRetryable(statusCode))
+			if (!UploadPolicy::IsRetryable(statusCode))
 			{
 				ESP_LOGE(TAG, "Not retryable: %u measurements dropped.", static_cast<unsigned>(items.size()));
 				store.Consume(records);
@@ -184,7 +176,7 @@ namespace SecureUpload
 			return;
 		}
 
-		if (!IsRetryable(statusCode))
+		if (!UploadPolicy::IsRetryable(statusCode))
 		{
 			ESP_LOGE(TAG, "Not retryable: %u measurements dropped.", static_cast<unsigned>(items.size()));
 			for (auto measurement : items)
