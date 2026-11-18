@@ -113,7 +113,7 @@ namespace GenericESP32Firmware
     namespace
     {
         static std::string s_deviceTypeName;
-        static std::string s_displayName; // for people, e.g. "Woonkamermodule"; empty: none set
+        static std::string s_shortName; // for people, e.g. "Woonkamer"; empty: none set
 
         static EventGroupHandle_t s_wifiEventGroup;
         static bool s_wifiInitialized = false;
@@ -754,7 +754,7 @@ namespace GenericESP32Firmware
 
 #if M5STACK_COREINK
             auto qrCodePayload = GetProvisioningQrPayload();
-            s_screen.DisplayProvisioningQR(qrCodePayload, GetDeviceServiceName(), s_displayName,
+            s_screen.DisplayProvisioningQR(qrCodePayload, GetDeviceServiceName(), s_shortName,
                                            esp_ota_get_app_description()->version);
 
             s_powerOffTimeout.Start();
@@ -937,9 +937,9 @@ namespace GenericESP32Firmware
         }
     } // namespace
 
-    void SetDisplayName(const std::string &displayName)
+    void SetShortName(const std::string &shortName)
     {
-        s_displayName = displayName;
+        s_shortName = shortName;
     }
 
     void Initialize(const std::string &deviceTypeName)

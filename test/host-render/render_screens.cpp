@@ -58,7 +58,7 @@ namespace
 	{
 		static const std::vector<Sample> samples = {
 			{"01-provisioning-qr", [](ScreenLayout &l)
-			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "Woonkamermodule", "v1.2.0"); }},
+			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "Woonkamer", "v1.2.0-rc.6"); }},
 			{"02-steps-wifi", [](ScreenLayout &l)
 			 { l.DrawSteps("Koppelen", "2 van 3", ProvisioningSteps(0), "Verbinden met wifi (tot 30 s)...",
 						   "Houd de app open"); }},
