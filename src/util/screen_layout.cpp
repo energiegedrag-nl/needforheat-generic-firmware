@@ -365,7 +365,24 @@ int ScreenLayout::Footer(const std::string &left, const std::string &right)
 		m_canvas.drawString(fitted.c_str(), W - MARGIN, FOOTER_BASE);
 	}
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
-	m_canvas.drawString(Fit(left, W - 2 * MARGIN - rightWidth).c_str(), MARGIN, FOOTER_BASE);
+	// "icon:<name> text": the icon (include/util/icons.hpp), then the text, e.g. the upload icon and "14:10".
+	int x = MARGIN;
+	std::string text = left;
+	constexpr const char *PREFIX = "icon:";
+	if (text.rfind(PREFIX, 0) == 0)
+	{
+		size_t space = text.find(' ');
+		std::string name = text.substr(std::strlen(PREFIX), space == std::string::npos ? std::string::npos : space - std::strlen(PREFIX));
+		const Icons::Icon *icon = Icons::Find(name.c_str());
+		if (icon != nullptr)
+		{
+			m_canvas.drawBitmap(x, FOOTER_LINE + 2 + (H - FOOTER_LINE - 2 - icon->height) / 2, icon->bits, icon->width,
+								icon->height, BLACK);
+			x += icon->width + 5;
+			text = space == std::string::npos ? "" : text.substr(space + 1);
+		}
+	}
+	m_canvas.drawString(Fit(text, W - MARGIN - x - rightWidth).c_str(), x, FOOTER_BASE);
 	return FOOTER_LINE;
 }
 

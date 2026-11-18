@@ -33,6 +33,7 @@ ICONS = {
     "gas": ("local_fire_department-fill", "7b81a5ba0f9f7378540f95e26473ee11aab032b6646a9c0bbcfca155502d6b1d"),
     "electricity_meter": ("electric_meter-fill", "ad2e5f58633c60505da8874d430b73ac88eb71b1fb4cbab3e2a2a0067a4d0fc8"),
     "gas_meter": ("gas_meter-fill", "f8b264026e55375add27cb3e31da60ee653ce5eea9603be54291b7ee4ad29819"),
+    "uploaded": ("cloud_done-fill", "7acf39049e5d2eaafd5479a8cf2028564289f842f827b64091fcc9bc4597de07"),  # last upload succeeded (footer, next to the time)
 }
 
 OUT = Path("include/util/icons.hpp")

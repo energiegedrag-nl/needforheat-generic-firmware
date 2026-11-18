@@ -40,7 +40,7 @@ namespace
 		s.bigValue = value;
 		s.bigUnit = unit;
 		s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
-		s.footerLeft = "verstuurd 14:10";
+		s.footerLeft = "icon:uploaded 14:10";
 		s.footerRight = "info";
 		return s;
 	}
@@ -90,7 +90,7 @@ namespace
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
 				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}, {"icon:person", "2"}};
-				 s.footerLeft = "verstuurd 14:10";
+				 s.footerLeft = "icon:uploaded 14:10";
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
 			 }},
@@ -105,7 +105,7 @@ namespace
 				 s.bigValue = "0,42";
 				 s.bigUnit = "kW";
 				 s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
-				 s.footerLeft = "verstuurd di"; // last upload earlier this week
+				 s.footerLeft = "icon:uploaded di"; // last upload earlier this week
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
 			 }},

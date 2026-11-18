@@ -109,12 +109,12 @@ int main()
 	struct tm now = {}, sent = {};
 	LocalTime::Local(Utc(2026, 11, 18, 13, 10), fixed, now); // wo 18 nov 14:10
 	LocalTime::Local(Utc(2026, 11, 18, 13, 0), fixed, sent);
-	Check(LocalTime::SentNl(sent, now, true) == "verstuurd 14:00", "sent today");
+	Check(LocalTime::SentNl(sent, now, true) == "14:00", "sent today");
 	LocalTime::Local(Utc(2026, 11, 17, 22, 50), fixed, sent); // di 17 nov 23:50
-	Check(LocalTime::SentNl(sent, now, true) == "verstuurd di", "sent yesterday");
+	Check(LocalTime::SentNl(sent, now, true) == "di", "sent yesterday");
 	LocalTime::Local(Utc(2026, 11, 11, 9, 0), fixed, sent);
-	Check(LocalTime::SentNl(sent, now, true) == "verstuurd 11 nov", "sent a week ago");
-	Check(LocalTime::SentNl(sent, now, false) == "verstuurd 11 nov", "today unknown");
+	Check(LocalTime::SentNl(sent, now, true) == "11 nov", "sent a week ago");
+	Check(LocalTime::SentNl(sent, now, false) == "11 nov", "today unknown");
 	Check(LocalTime::SentNl(sent, now, true).size() <= 16, "footer length");
 
 	if (failures)

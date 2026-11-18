@@ -1191,7 +1191,8 @@ namespace GenericESP32Firmware
             {
                 struct tm local;
                 LocalTimeForScreen(lastUpload, local);
-                status.footerLeft = LocalTime::SentNl(local, today, synchronised);
+                // Cloud with a check mark: the measurements are on the server; next to it when that was.
+                status.footerLeft = "icon:uploaded " + LocalTime::SentNl(local, today, synchronised);
             }
             else
                 status.footerLeft = "alles verstuurd";
