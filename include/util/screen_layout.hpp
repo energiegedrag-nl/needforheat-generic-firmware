@@ -47,7 +47,7 @@ public:
 		std::string date;										// e.g. "wo 18 nov" (not a clock: the screen does not refresh every minute); empty: not shown
 		bool wifiConnected = true;
 		std::string badge;										// e.g. "TEST" for a test server; empty: none
-		std::string device;										// short device label in the header, e.g. "P1"
+		std::string device;										// not shown on the overview (since 18-11); kept for callers
 		int battery = -1;										// header icon: 0..4 bars, 5 USB power; -1 none
 		std::string bigLabel;									// e.g. "CO₂" (subscript digits allowed)
 		std::string bigValue;									// e.g. "612"
@@ -83,7 +83,7 @@ public:
 	std::string DrawBlank();
 	std::string DrawQR(const std::string &payload, int padding, const std::string &text);
 	std::string DrawProvisioningQR(const std::string &payload, const std::string &deviceName,
-								   const std::string &footerLeft, const std::string &footerRight);
+								   const std::string &displayName, const std::string &version);
 	std::string DrawSteps(const std::string &title, const std::string &titleRight, const std::vector<Step> &steps,
 						  const std::string &message, const std::string &footer);
 	std::string DrawMessage(const std::string &title, const std::vector<std::string> &paragraphs,

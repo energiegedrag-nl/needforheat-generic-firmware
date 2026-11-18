@@ -75,11 +75,11 @@ void Screen::DisplayQR(const std::string &payload, int padding, const std::strin
 }
 
 void Screen::DisplayProvisioningQR(const std::string &payload, const std::string &deviceName,
-								   const std::string &footerLeft, const std::string &footerRight)
+								   const std::string &displayName, const std::string &version)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_mutex);
 	ScreenLayout layout(m_canvas);
-	Push(layout.DrawProvisioningQR(payload, deviceName, footerLeft, footerRight));
+	Push(layout.DrawProvisioningQR(payload, deviceName, displayName, version));
 }
 
 void Screen::DisplaySteps(const std::string &title, const std::string &titleRight, const std::vector<Step> &steps,

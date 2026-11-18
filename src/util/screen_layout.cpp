@@ -375,17 +375,18 @@ std::string ScreenLayout::DrawQR(const std::string &payload, int padding, const 
 }
 
 std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const std::string &deviceName,
-											 const std::string &footerLeft, const std::string &footerRight)
+											 const std::string &displayName, const std::string &version)
 {
 	Begin();
-	Header("Koppelen", "via app");
+	// Which device this is (a box can hold several CoreInks), large in the header; what to do in the footer.
+	Header(displayName.empty() ? "Koppelen" : displayName, displayName.empty() ? "via app" : "");
 	// A QR code needs 4 modules of white around it: the header bar above it counts as black.
 	m_canvas.qrcode(payload.c_str(), (W - PROVISIONING_QR_SIZE) / 2, HEADER_H + PROVISIONING_QR_QUIET,
 					PROVISIONING_QR_SIZE);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_center);
 	m_canvas.drawString(Fit(deviceName, W - 2 * MARGIN).c_str(), W / 2, PROVISIONING_NAME_BASE);
-	Footer(footerLeft, footerRight);
+	Footer(displayName.empty() ? "" : "koppel via app", version);
 	return "prov:" + payload;
 }
 
@@ -468,7 +469,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	Begin();
 
 	// Header: Wi-Fi symbol and date left, badge (e.g. TEST) in the middle, device label right.
-	Header(status.date, status.device, 22, status.badge, status.battery);
+	Header(status.date, "", 22, status.badge, status.battery); // no device label: clear from the screen in use
 	WifiSymbol(MARGIN - 1, HEADER_BASE + 1, status.wifiConnected, WHITE);
 	int bottom = Footer(status.footerLeft, status.footerRight);
 

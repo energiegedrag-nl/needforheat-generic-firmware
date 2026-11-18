@@ -50,9 +50,10 @@ public:
 	 */
 	void DisplayQR(const std::string &payload, int padding, const std::string &text = "");
 
-	/** Provisioning QR: header, QR code, device name below it, footer (e.g. device type, version). */
+	/** Provisioning QR: the display name (e.g. "Woonkamermodule") in the header, the QR code, the service name below it
+	 *  and the firmware version in the footer. */
 	void DisplayProvisioningQR(const std::string &payload, const std::string &deviceName,
-							   const std::string &footerLeft, const std::string &footerRight);
+							   const std::string &displayName, const std::string &version);
 
 	/** Progress screen: a list of steps, a message below them and a footer. */
 	void DisplaySteps(const std::string &title, const std::string &titleRight, const std::vector<Step> &steps,
