@@ -104,6 +104,18 @@ int main()
 	LocalTime::Local(Utc(2026, 12, 31, 23, 30), fixed, day);
 	Check(LocalTime::DateNl(day) == "vr 1 jan", "date: new year in local time");
 	Check(std::string(LocalTime::WeekdayNl(day)) == "vr", "weekday");
+	Check(LocalTime::DateNl(day, false) == "1 jan", "date without weekday");
+	// Footer: last upload today, earlier this week, or longer ago (local times).
+	struct tm now = {}, sent = {};
+	LocalTime::Local(Utc(2026, 11, 18, 13, 10), fixed, now); // wo 18 nov 14:10
+	LocalTime::Local(Utc(2026, 11, 18, 13, 0), fixed, sent);
+	Check(LocalTime::SentNl(sent, now, true) == "verstuurd 14:00", "sent today");
+	LocalTime::Local(Utc(2026, 11, 17, 22, 50), fixed, sent); // di 17 nov 23:50
+	Check(LocalTime::SentNl(sent, now, true) == "verstuurd di", "sent yesterday");
+	LocalTime::Local(Utc(2026, 11, 11, 9, 0), fixed, sent);
+	Check(LocalTime::SentNl(sent, now, true) == "verstuurd 11 nov", "sent a week ago");
+	Check(LocalTime::SentNl(sent, now, false) == "verstuurd 11 nov", "today unknown");
+	Check(LocalTime::SentNl(sent, now, true).size() <= 16, "footer length");
 
 	if (failures)
 	{

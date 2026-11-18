@@ -33,7 +33,7 @@ namespace
 	ScreenLayout::Status Big(const char *label, const char *value, const char *unit)
 	{
 		ScreenLayout::Status s;
-		s.date = "wo 18 nov";
+		s.date = "18 nov";
 		s.badge = "TEST";
 		s.device = "P1";
 		s.bigLabel = label;
@@ -78,7 +78,7 @@ namespace
 			{"07-status-living-room", [](ScreenLayout &l)
 			 {
 				 ScreenLayout::Status s;
-				 s.date = "wo 18 nov";
+				 s.date = "18 nov";
 				 s.badge = "TEST";
 				 s.device = "WK";
 				 s.bigLabel = "CO₂";
@@ -92,14 +92,14 @@ namespace
 			{"08-status-p1", [](ScreenLayout &l)
 			 {
 				 ScreenLayout::Status s;
-				 s.date = "wo 18 nov";
+				 s.date = "18 nov"; // with a TEST badge the weekday is left out
 				 s.badge = "TEST";
 				 s.device = "P1";
 				 s.bigLabel = "stroom";
 				 s.bigValue = "0,42";
 				 s.bigUnit = "kW";
 				 s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
-				 s.footerLeft = "verstuurd 14:10";
+				 s.footerLeft = "verstuurd di"; // last upload earlier this week
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
 			 }},
@@ -113,7 +113,7 @@ namespace
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
 				 s.tiles = {{"gas m³", "0,0"}, {"DSMR", "5.0"}};
-				 s.footerLeft = "128 niet verstuurd";
+				 s.footerLeft = "128 onverzonden";
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
 			 }},

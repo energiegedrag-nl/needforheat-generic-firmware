@@ -1133,24 +1133,21 @@ namespace GenericESP32Firmware
         struct tm today;
         LocalTimeForScreen(now, today); // the clock runs in UTC; people read local time
         bool synchronised = today.tm_year + 1900 >= 2024;
-        if (status.date.empty() && synchronised)
-            status.date = LocalTime::DateNl(today);
         if (status.badge.empty())
             status.badge = ServerBadge();
+        if (status.date.empty() && synchronised)
+            status.date = LocalTime::DateNl(today, status.badge.empty()); // with a TEST badge the weekday does not fit
         if (status.footerLeft.empty())
         {
             auto pending = SecureUpload::PersistentStore::GetInstance().Pending();
             time_t lastUpload = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
             if (pending > 0)
-                status.footerLeft = std::to_string(pending) + " niet verstuurd";
+                status.footerLeft = std::to_string(pending) + " onverzonden";
             else if (lastUpload > 0)
             {
                 struct tm local;
                 LocalTimeForScreen(lastUpload, local);
-                char text[8];
-                strftime(text, sizeof(text), "%H:%M", &local);
-                bool sameDay = synchronised && local.tm_year == today.tm_year && local.tm_yday == today.tm_yday;
-                status.footerLeft = std::string("verstuurd ") + (sameDay ? "" : std::string(LocalTime::WeekdayNl(local)) + " ") + text;
+                status.footerLeft = LocalTime::SentNl(local, today, synchronised);
             }
             else
                 status.footerLeft = "alles verstuurd";
