@@ -19,11 +19,9 @@ namespace M5CoreInkSpecific
             vTaskDelay(Delay::Seconds(*timeout));
 
             ESP_LOGD(TAG, "PowerOffTimeout");
-            // Screen screen;
-            // screen.Clear();
-
-            // // Allow some time for the screen to clear properly.
-            // vTaskDelay(Delay::MilliSeconds(300));
+            // Let the screen finish its refresh and put the panel to sleep, so the provisioning QR code stays
+            // sharp after the power is cut.
+            Screen::Instance().PrepareForPowerOff();
 
             // Power off the M5CoreINK.
             powerpin_reset();

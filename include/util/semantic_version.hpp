@@ -30,7 +30,7 @@ public:
     /**
      * Convert the SemanticVersion object to a char*.
      *
-     * @return Semantic version string, e.g.: "v1.5.23".
+     * @return Semantic version string, e.g.: "v1.5.23"; valid until the next call or until this object is destroyed.
      */
     const char *CString();
 
@@ -47,6 +47,7 @@ private:
     uint16_t m_minor;
     uint16_t m_patch;
     std::string m_extra;
+    std::string m_string; // for CString()
 };
 
 bool operator==(const SemanticVersion &sv1, const SemanticVersion &sv2);

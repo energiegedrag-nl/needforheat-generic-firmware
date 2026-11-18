@@ -16,6 +16,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      # Finish every build, also when one fails: both sizes and linker maps are useful.
+      fail-fast: false
       matrix:
         # List all of the PlatformIO platforms to build
         platformio_env:
@@ -49,6 +51,17 @@ jobs:
           TEST_DIR: ${{ matrix.test_dir }}
         run: pio run -e $PLATFORMIO_ENV -d $TEST_DIR
 
+      # The ELF file (with symbols) shows what takes the flash (the CoreInk app partition is nearly full).
+      - name: Upload the ELF file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-elf-${{ matrix.platformio_env }}
+          path: ${{ matrix.test_dir }}/.pio/build/${{ matrix.platformio_env }}/firmware.elf
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Unit tests that run on the PC (no device needed), e.g. the power-loss tests of the flash log.
   host-tests:
     runs-on: ubuntu-latest
@@ -61,3 +74,27 @@ jobs:
           ./flash_log_test
           g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/provisioning_code_test.cpp -o provisioning_code_test
           ./provisioning_code_test
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include test/host/text_parse_test.cpp src/util/semantic_version.cpp -o text_parse_test
+          ./text_parse_test
+
+  # Draws every e-ink screen on the PC (LovyanGFX, 1-bit) and keeps the images as a build artifact, to check the
+  # layout at 1:1 and x3 before flashing; see test/host-render/README.md.
+  screen-renders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Render the screens
+        run: |
+          sh test/host-render/build.sh build/screens
+          pip install pillow
+          python test/host-render/to_png.py build/screens
+      - name: Upload the screens
+        uses: actions/upload-artifact@v4
+        with:
+          name: eink-screens
+          path: build/screens/*.png

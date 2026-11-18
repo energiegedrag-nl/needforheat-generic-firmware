@@ -5,6 +5,9 @@
 #include <driver/gpio.h>
 
 #include <util/http_util.hpp>
+#ifdef M5STACK_COREINK
+#include <util/screen.hpp>
+#endif
 
 // API path prefix of the NeedForHeat server. Default "/v3", the current server API.
 // Servers that still publish the device endpoints under /v2 can be reached with:
@@ -70,6 +73,15 @@ namespace GenericESP32Firmware
      * else the one built into the firmware.
      */
     std::string GetServerHostname();
+
+#ifdef M5STACK_COREINK
+    /**
+     * Show the overview screen on the e-ink display (see Screen::Status), e.g. after each measurement.
+     * Fills in what the generic firmware knows: Wi-Fi state, clock, a TEST badge for a test server and,
+     * when footerLeft is empty, the number of measurements waiting for upload.
+     */
+    void DisplayStatus(Screen::Status status);
+#endif
 
     /**
      * Send an HTTPS POST request to the backend API.

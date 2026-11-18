@@ -4,7 +4,7 @@
 #include <map>
 #include <iterator>
 #include <algorithm>
-#include <regex>
+#include <util/text_parse.hpp>
 #include <cstdio>
 #include <utility>
 
@@ -77,24 +77,21 @@ namespace OTAFirmwareUpdater
 
             ESP_LOGD(TAG, "Response when checking for new releases:\n%s", response.data());
 
-            std::regex regexString("\"tag_name\":\"([^\"]+)\"");
-
             std::string responseString(response.begin(), response.end());
 
-            std::smatch matches;
-            auto matchFound = std::regex_search(responseString, matches, regexString);
-            if (!matchFound)
+            std::string tagName;
+            if (!TextParse::FindJsonString(responseString, "tag_name", tagName))
             {
                 ESP_LOGE(TAG, "No version number found in response.");
                 return std::make_pair(false, "");
             }
 
-            ESP_LOGI(TAG, "Latest release on GitHub: %s", matches.str(1).c_str());
+            ESP_LOGI(TAG, "Latest release on GitHub: %s", tagName.c_str());
 
             auto currentDescription = esp_ota_get_app_description();
 
             SemanticVersion currentVersion(currentDescription->version);
-            SemanticVersion foundVersion(matches.str(1));
+            SemanticVersion foundVersion(tagName);
 
             if (foundVersion > currentVersion)
             {

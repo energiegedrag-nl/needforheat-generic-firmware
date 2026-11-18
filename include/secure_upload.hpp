@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ctime>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
@@ -35,6 +37,9 @@ namespace SecureUpload
          * Upload all measurements on the queue to the backend API.
          */
         void Upload();
+
+        /** Time of the last successful upload in this boot (0: none yet), e.g. for the screen. */
+        time_t LastSuccessfulUpload() const;
 
     private:
         /**

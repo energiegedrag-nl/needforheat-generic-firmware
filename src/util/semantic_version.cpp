@@ -1,25 +1,15 @@
 #include <util/semantic_version.hpp>
 
-#include <regex>
-
-#define REGEX_STRING "v?(\\d+)\\.(\\d+)\\.(\\d+)-?(.*)"
+#include <util/text_parse.hpp>
 
 SemanticVersion::SemanticVersion(const std::string &versionString)
 {
-    std::regex regexString(REGEX_STRING);
-
-    std::smatch matches;
-    auto matchFound = std::regex_search(versionString, matches, regexString);
-    if (matchFound && matches.ready())
+    unsigned long major, minor, patch;
+    if (TextParse::ParseVersion(versionString, major, minor, patch, m_extra))
     {
-        m_major = stoi(matches.str(1));
-        m_minor = stoi(matches.str(2));
-        m_patch = stoi(matches.str(3));
-
-        if (matches.size() == 5)
-        {
-            m_extra = matches.str(4);
-        }
+        m_major = static_cast<uint16_t>(major);
+        m_minor = static_cast<uint16_t>(minor);
+        m_patch = static_cast<uint16_t>(patch);
     }
     else {
         m_major = 0;
@@ -40,7 +30,9 @@ std::string SemanticVersion::String()
 
 const char *SemanticVersion::CString()
 {
-    return String().c_str();
+    // Kept in the object: the pointer stays valid until the next call or until the object is destroyed.
+    m_string = String();
+    return m_string.c_str();
 }
 
 bool operator==(const SemanticVersion &sv1, const SemanticVersion &sv2)

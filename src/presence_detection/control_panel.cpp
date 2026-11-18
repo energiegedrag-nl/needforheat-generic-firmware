@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <vector>
 #include <set>
-#include <regex>
 #include <string>
 
 #include <esp_log.h>
@@ -52,7 +51,7 @@ namespace ControlPanel
 
     static EventGroupHandle_t s_events = xEventGroupCreate();
 
-    Screen sc;
+    Screen &sc = Screen::Instance();
     Menu menuState;
 
     static PresenceDetection::UseBluetooth *useBluetoothPtr = nullptr;

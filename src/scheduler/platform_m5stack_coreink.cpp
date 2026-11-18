@@ -15,6 +15,7 @@
 #include <util/delay.hpp>
 #include <specific_m5coreink/powerpin.h>
 #include <specific_m5coreink/rtc.h>
+#include <util/screen.hpp>
 
 constexpr const char *TAG = "Scheduler";
 
@@ -99,6 +100,8 @@ namespace M5StackCoreInk
             rtc_set_alarm(nextTaskTime_s);
             vTaskDelay(Delay::MilliSeconds(250));
 
+            // Let the screen finish its refresh and put the panel to sleep before the power is cut.
+            Screen::Instance().PrepareForPowerOff();
             powerpin_reset();
 
             ESP_LOGD(TAG, "Unable to shutdown because USB power is connected. Delaying instead.");
