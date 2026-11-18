@@ -74,6 +74,30 @@ int main()
 	Check(Local(Utc(2027, 10, 31, 0, 59)) == "2027-10-31 02:59", "before autumn 2027");
 	Check(Local(Utc(2027, 10, 31, 1, 0)) == "2027-10-31 02:00", "autumn 2027");
 
+	// Offset from the server: used until the next change, then its next offset for at most 240 days, then the rule.
+	LocalTime::ServerOffset none;
+	Check(LocalTime::Offset_s(Utc(2026, 11, 18, 12, 0), none) == 3600, "no server offset: rule");
+	LocalTime::ServerOffset s;
+	Check(LocalTime::Parse("3600,1806195600,7200", s) && s.valid && s.offset_s == 3600 && s.nextChange == 1806195600 &&
+			  s.nextOffset_s == 7200, "parse");
+	Check(LocalTime::Serialize(s) == "3600,1806195600,7200", "serialize");
+	Check(LocalTime::Offset_s(Utc(2027, 3, 28, 0, 59), s) == 3600, "server: before change");
+	Check(LocalTime::Offset_s(Utc(2027, 3, 28, 1, 0), s) == 7200, "server: after change");
+	Check(LocalTime::Offset_s(Utc(2028, 1, 15, 12, 0), s) == 3600, "server: too old, rule");
+	// The EU ends summer time: the server says winter time, no next change.
+	LocalTime::ServerOffset fixed;
+	Check(LocalTime::Parse("3600,0,3600", fixed), "parse fixed");
+	Check(LocalTime::Offset_s(Utc(2030, 7, 1, 12, 0), fixed) == 3600, "server: no changes any more");
+	Check(Local(Utc(2026, 11, 18, 13, 10)) == "2026-11-18 14:10", "local still winter");
+	struct tm parts = {};
+	LocalTime::Local(Utc(2030, 7, 1, 12, 0), fixed, parts);
+	Check(parts.tm_hour == 13, "local with fixed server offset");
+	LocalTime::ServerOffset bad;
+	Check(!LocalTime::Parse("", bad) && !bad.valid, "parse empty");
+	Check(!LocalTime::Parse("3600,1806195600", bad), "parse two values");
+	Check(!LocalTime::Parse("3600,1806195600,7200x", bad), "parse trailing");
+	Check(!LocalTime::Parse("99999,0,3600", bad), "parse implausible");
+
 	if (failures)
 	{
 		std::printf("%d failure(s)\n", failures);

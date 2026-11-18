@@ -1,14 +1,18 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
 #include <ctime>
+#include <string>
 
 /**
  * Dutch local time (CET/CEST) for what the screen shows. The system clock and the RTC stay in UTC (TZ=UTC), as do
  * all timestamps that are uploaded; only texts for people use this. Header-only and without ESP-IDF, so
  * test/host/local_time_test.cpp checks it on the PC.
  *
- * EU rule (since 1996): summer time from the last Sunday of March 01:00 UTC to the last Sunday of October 01:00 UTC.
+ * The server sends the offset now and the next change with each upload (ServerOffset); without it, or when it is
+ * too old, the built-in EU rule applies (since 1996): summer time from the last Sunday of March 01:00 UTC to the
+ * last Sunday of October 01:00 UTC.
  */
 namespace LocalTime
 {
@@ -82,5 +86,75 @@ namespace LocalTime
 	inline void Netherlands(time_t utc, struct tm &local)
 	{
 		BreakDown(static_cast<int64_t>(utc) + OffsetNetherlands_s(utc), local);
+	}
+
+	/** Offset as the server sent it with the last upload (utc_offset_s, next_offset_change, next_utc_offset_s). */
+	struct ServerOffset
+	{
+		bool valid = false;
+		int32_t offset_s = 0;
+		int64_t nextChange = 0; // Unix time of the next change; 0: the zone has none
+		int32_t nextOffset_s = 0;
+
+		bool operator==(const ServerOffset &o) const
+		{
+			return valid == o.valid && offset_s == o.offset_s && nextChange == o.nextChange && nextOffset_s == o.nextOffset_s;
+		}
+		bool operator!=(const ServerOffset &o) const { return !(*this == o); }
+	};
+
+	/** Real offsets lie between UTC-12 and UTC+14. */
+	inline bool PlausibleOffset(int64_t offset_s) { return offset_s >= -12 * 3600 && offset_s <= 14 * 3600; }
+
+	/** After the next change the offset after it is known, but not the change after that: trust it this long. */
+	constexpr int64_t SERVER_OFFSET_VALID_AFTER_CHANGE_S = 240LL * 86400;
+
+	/** Offset at utc: from the server while that is known, else the built-in Dutch rule. */
+	inline int Offset_s(time_t utc, const ServerOffset &server)
+	{
+		const int64_t t = static_cast<int64_t>(utc);
+		if (server.valid)
+		{
+			if (server.nextChange == 0 || t < server.nextChange)
+				return server.offset_s;
+			if (t < server.nextChange + SERVER_OFFSET_VALID_AFTER_CHANGE_S)
+				return server.nextOffset_s;
+		}
+		return OffsetNetherlands_s(utc);
+	}
+
+	/** Broken-down local time for people, for strftime. */
+	inline void Local(time_t utc, const ServerOffset &server, struct tm &local)
+	{
+		BreakDown(static_cast<int64_t>(utc) + Offset_s(utc, server), local);
+	}
+
+	/** "offset,nextChange,nextOffset" for NVS. */
+	inline std::string Serialize(const ServerOffset &s)
+	{
+		return std::to_string(s.offset_s) + "," + std::to_string(s.nextChange) + "," + std::to_string(s.nextOffset_s);
+	}
+
+	/** Reads what Serialize wrote; false (and s invalid) for anything else. */
+	inline bool Parse(const std::string &text, ServerOffset &s)
+	{
+		s = ServerOffset{};
+		const char *p = text.c_str();
+		char *end = nullptr;
+		long long values[3];
+		for (int i = 0; i < 3; i++)
+		{
+			values[i] = std::strtoll(p, &end, 10);
+			if (end == p || (i < 2 && *end != ',') || (i == 2 && *end != '\0'))
+				return false;
+			p = end + 1;
+		}
+		if (!PlausibleOffset(values[0]) || !PlausibleOffset(values[2]) || values[1] < 0)
+			return false;
+		s.valid = true;
+		s.offset_s = static_cast<int32_t>(values[0]);
+		s.nextChange = values[1];
+		s.nextOffset_s = static_cast<int32_t>(values[2]);
+		return true;
 	}
 } // namespace LocalTime

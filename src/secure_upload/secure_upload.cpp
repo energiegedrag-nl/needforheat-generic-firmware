@@ -56,6 +56,35 @@ namespace SecureUpload
 		}
 
 		/**
+		 * Take the local time offset from an upload response (API: utc_offset_s, next_offset_change,
+		 * next_utc_offset_s), for the time on the screen. Older servers do not send it: nothing changes then.
+		 */
+		void TakeDisplayOffset(const HTTPUtil::buffer_t &response)
+		{
+			auto json = cJSON_Parse(response.c_str());
+			if (json == nullptr)
+				return;
+			auto offset = cJSON_GetObjectItem(json, "utc_offset_s");
+			auto nextChange = cJSON_GetObjectItem(json, "next_offset_change");
+			auto nextOffset = cJSON_GetObjectItem(json, "next_utc_offset_s");
+			if (cJSON_IsNumber(offset) && LocalTime::PlausibleOffset(static_cast<int64_t>(offset->valuedouble)))
+			{
+				LocalTime::ServerOffset s;
+				s.valid = true;
+				s.offset_s = static_cast<int32_t>(offset->valuedouble);
+				s.nextOffset_s = s.offset_s;
+				if (cJSON_IsNumber(nextChange) && cJSON_IsNumber(nextOffset) && nextChange->valuedouble > 0 &&
+					LocalTime::PlausibleOffset(static_cast<int64_t>(nextOffset->valuedouble)))
+				{
+					s.nextChange = static_cast<int64_t>(nextChange->valuedouble);
+					s.nextOffset_s = static_cast<int32_t>(nextOffset->valuedouble);
+				}
+				GenericESP32Firmware::SetDisplayOffset(s);
+			}
+			cJSON_Delete(json);
+		}
+
+		/**
 		 * Post measurements to the backend in one upload. Returns the HTTP status code (<= 0: no connection).
 		 */
 		int PostMeasurements(const std::vector<Measurements::Measurement *> &items)
@@ -82,7 +111,10 @@ namespace SecureUpload
 			if (statusCode != 200)
 				ESP_LOGE(TAG, "Posting to backend returned statuscode %d. Response: %s", statusCode, dataReceive.c_str());
 			else
+			{
 				s_lastSuccessfulUpload = time(nullptr);
+				TakeDisplayOffset(dataReceive);
+			}
 			return statusCode;
 		}
 	} // namespace

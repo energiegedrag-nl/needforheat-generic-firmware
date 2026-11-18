@@ -18,6 +18,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <vector>
 
 #include <util/error.hpp>
@@ -133,6 +134,31 @@ namespace GenericESP32Firmware
 
         /** HTTP status of the last activation attempt (0: none or no connection), for the screen. */
         static int s_lastActivationStatus = 0;
+
+        /** Local time offset from the server (see SetDisplayOffset), loaded from NVS on first use. */
+        static std::mutex s_displayOffsetMutex;
+        static bool s_displayOffsetLoaded = false;
+        static LocalTime::ServerOffset s_displayOffset;
+
+        /** Call with s_displayOffsetMutex held. */
+        const LocalTime::ServerOffset &DisplayOffsetLocked()
+        {
+            if (!s_displayOffsetLoaded)
+            {
+                std::string text;
+                if (NVS::Get(NVS_NAMESPACE, "tz_offset", text) == ESP_OK)
+                    LocalTime::Parse(text, s_displayOffset);
+                s_displayOffsetLoaded = true;
+            }
+            return s_displayOffset;
+        }
+
+        /** Broken-down local time for the screen. */
+        void LocalTimeForScreen(time_t utc, struct tm &local)
+        {
+            std::lock_guard<std::mutex> lock(s_displayOffsetMutex);
+            LocalTime::Local(utc, DisplayOffsetLocked(), local);
+        }
 
 #ifdef M5STACK_COREINK
         /** "TEST" for a test server, empty for production; the server name otherwise. */
@@ -1070,7 +1096,7 @@ namespace GenericESP32Firmware
         {
             time_t now = time(nullptr);
             struct tm local;
-            LocalTime::Netherlands(now, local); // the clock runs in UTC; people read Dutch time
+            LocalTimeForScreen(now, local); // the clock runs in UTC; people read local time
             if (local.tm_year + 1900 >= 2024) // only a synchronised clock
             {
                 char text[8];
@@ -1089,7 +1115,7 @@ namespace GenericESP32Firmware
             else if (lastUpload > 0)
             {
                 struct tm local;
-                LocalTime::Netherlands(lastUpload, local);
+                LocalTimeForScreen(lastUpload, local);
                 char text[8];
                 strftime(text, sizeof(text), "%H:%M", &local);
                 status.footerLeft = std::string("verstuurd ") + text;
@@ -1100,6 +1126,19 @@ namespace GenericESP32Firmware
         s_screen.DisplayStatus(status);
     }
 #endif // M5STACK_COREINK
+
+    void SetDisplayOffset(const LocalTime::ServerOffset &offset)
+    {
+        if (!offset.valid)
+            return;
+        std::lock_guard<std::mutex> lock(s_displayOffsetMutex);
+        if (offset == DisplayOffsetLocked())
+            return; // unchanged: no NVS write (an upload every 10 minutes)
+        s_displayOffset = offset;
+        auto err = NVS::Set(NVS_NAMESPACE, "tz_offset", LocalTime::Serialize(offset));
+        Error::CheckAppendName(err, TAG, "An error occured when setting NVS key tz_offset");
+        ESP_LOGI(TAG, "Local time offset from the server: %s", LocalTime::Serialize(offset).c_str());
+    }
 
     std::string GetServerHostname()
     {
