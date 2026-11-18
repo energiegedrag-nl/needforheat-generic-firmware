@@ -39,7 +39,7 @@ namespace
 		s.bigLabel = label;
 		s.bigValue = value;
 		s.bigUnit = unit;
-		s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
+		s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
 		s.footerLeft = "verstuurd 14:10";
 		s.footerRight = "info";
 		return s;
@@ -89,7 +89,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}, {"pers.", "2"}};
+				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}, {"icon:person", "2"}};
 				 s.footerLeft = "verstuurd 14:10";
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
@@ -101,10 +101,10 @@ namespace
 				 s.badge = "TEST";
 				 s.device = "P1";
 				 s.battery = 4;
-				 s.bigLabel = "stroom";
+				 s.bigLabel = "icon:power";
 				 s.bigValue = "0,42";
 				 s.bigUnit = "kW";
-				 s.tiles = {{"gas m³", "1,2"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
+				 s.tiles = {{"icon:gas", "1,2 m³"}, {"DSMR", "5.0"}, {"lezer", "aan"}};
 				 s.footerLeft = "verstuurd di"; // last upload earlier this week
 				 s.footerRight = "info";
 				 l.DrawStatus(s);
@@ -116,10 +116,10 @@ namespace
 				 s.wifiConnected = false;
 				 s.device = "P1";
 				 s.battery = 3;
-				 s.bigLabel = "stroom";
+				 s.bigLabel = "icon:power";
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
-				 s.tiles = {{"gas m³", "0,0"}, {"DSMR", "5.0"}};
+				 s.tiles = {{"icon:gas", "0,0 m³"}, {"DSMR", "5.0"}};
 				 s.footerLeft = "128 onverzonden"; // DisplayStatus clears footerRight then
 				 s.footerRight = "";
 				 l.DrawStatus(s);
@@ -164,7 +164,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}};
+				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}};
 				 s.footerLeft = "opladen: ±18 u"; // BatteryMonitor::FooterText, Level::Day
 				 l.DrawStatus(s);
 			 }},
@@ -177,7 +177,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}};
+				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}};
 				 s.footerLeft = "laad nu op: ±5 u"; // Level::Today
 				 l.DrawStatus(s);
 			 }},

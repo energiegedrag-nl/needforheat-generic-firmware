@@ -1,8 +1,10 @@
 #include <util/screen_layout.hpp>
 
 #include <algorithm>
+#include <cstring>
 
 #include <util/fonts/u8g2_fonts.hpp>
+#include <util/icons.hpp>
 
 /*
  * Layout on the 200x200 panel; y values of text are baselines.
@@ -161,6 +163,23 @@ int ScreenLayout::LabelWidth(const std::string &text)
 		}
 	}
 	return width + m_canvas.textWidth(run.c_str());
+}
+
+void ScreenLayout::DrawLabelOrIcon(const std::string &text, int x, int baseline, int top, int maxWidth)
+{
+	constexpr const char *PREFIX = "icon:";
+	if (text.rfind(PREFIX, 0) == 0)
+	{
+		const Icons::Icon *icon = Icons::Find(text.c_str() + std::strlen(PREFIX));
+		if (icon != nullptr && icon->width <= maxWidth)
+		{
+			m_canvas.drawBitmap(x, top, icon->bits, icon->width, icon->height, BLACK);
+			return;
+		}
+		DrawLabel(text.substr(std::strlen(PREFIX)), x, baseline, maxWidth); // unknown icon: its name as text
+		return;
+	}
+	DrawLabel(text, x, baseline, maxWidth);
 }
 
 void ScreenLayout::DrawLabel(const std::string &text, int x, int y, int maxWidth)
@@ -492,7 +511,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	// Main value with its label; the font gets smaller only if the value does not fit.
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
-	DrawLabel(status.bigLabel, MARGIN, STATUS_LABEL_BASE, W - 2 * MARGIN);
+	DrawLabelOrIcon(status.bigLabel, MARGIN, STATUS_LABEL_BASE, HEADER_H + 4, W - 2 * MARGIN);
 	// Value and unit share the baseline; the unit is smaller and right after the value. The value font gets smaller
 	// only when value and unit do not fit.
 	constexpr int UNIT_GAP = 5;
@@ -536,7 +555,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder of W / n.
 			int maxW = (i + 1 == n ? W : tx + tileW) - textX - 2;
 			m_canvas.setFont(m_fonts.text);
-			DrawLabel(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, maxW);
+			DrawLabelOrIcon(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, STATUS_TILES_LINE + 4, maxW);
 			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})
 			{
 				m_canvas.setFont(font);
