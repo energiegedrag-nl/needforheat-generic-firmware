@@ -143,7 +143,7 @@ namespace
 			{"18-p1base-no-data", [](ScreenLayout &l)
 			 { l.DrawStatus(P1Base("geen data", "5,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
 			{"19-p1base-dsmr2-on-battery", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("stroom", "0,42", "kW", {{"DSMR", "2.2"}, {"lezer", "aan"}, {"laden", "via USB"}}, "accu")); }},
+			 { l.DrawStatus(P1Base("stroom", "0,42", "kW", {{"DSMR", "2.2"}, {"lezer", "aan"}, {"laden", "USB!"}}, "accu")); }},
 			{"20-p1base-no-meter", [](ScreenLayout &l)
 			 { l.DrawStatus(P1Base("geen meter", "0,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
 			{"21-p1base-overloaded", [](ScreenLayout &l)
