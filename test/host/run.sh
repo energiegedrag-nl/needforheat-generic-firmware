@@ -14,3 +14,5 @@ $CXX test/host/text_parse_test.cpp src/util/semantic_version.cpp -o "$OUT/text_p
 "$OUT/text_parse_test"
 $CXX test/host/upload_policy_test.cpp -o "$OUT/upload_policy_test"
 "$OUT/upload_policy_test"
+$CXX test/host/battery_monitor_test.cpp -o "$OUT/battery_monitor_test"
+"$OUT/battery_monitor_test"

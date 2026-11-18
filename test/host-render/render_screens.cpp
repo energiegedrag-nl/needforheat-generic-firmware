@@ -81,6 +81,7 @@ namespace
 				 s.date = "18 nov";
 				 s.badge = "TEST";
 				 s.device = "WK";
+				 s.battery = 5; // on USB power
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
@@ -95,6 +96,7 @@ namespace
 				 s.date = "18 nov"; // with a TEST badge the weekday is left out
 				 s.badge = "TEST";
 				 s.device = "P1";
+				 s.battery = 4;
 				 s.bigLabel = "stroom";
 				 s.bigValue = "0,42";
 				 s.bigUnit = "kW";
@@ -109,6 +111,7 @@ namespace
 				 s.date = "do 19 nov";
 				 s.wifiConnected = false;
 				 s.device = "P1";
+				 s.battery = 3;
 				 s.bigLabel = "stroom";
 				 s.bigValue = "-1,85";
 				 s.bigUnit = "kW";
@@ -147,7 +150,40 @@ namespace
 			{"20-p1base-no-meter", [](ScreenLayout &l)
 			 { l.DrawStatus(P1Base("geen meter", "0,0", "V", {{"lezer", "uit"}, {"laden", "uit"}}, "accu")); }},
 			{"21-p1base-overloaded", [](ScreenLayout &l)
-			 { l.DrawStatus(P1Base("P1 overbelast", "4,5", "V", {{"lezer", "aan"}, {"laden", "60mA"}}, "P1")); }},
+			 { l.DrawStatus(P1Base("P1 overbelast", "4,5", "V", {{"lezer", "aan"}, {"laden", "60mA"}},
+			{"22-battery-day", [](ScreenLayout &l)
+			 {
+				 ScreenLayout::Status s;
+				 s.date = "wo 18 nov";
+				 s.device = "WK";
+				 s.battery = 1;
+				 s.bigLabel = "CO₂";
+				 s.bigValue = "612";
+				 s.bigUnit = "ppm";
+				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}};
+				 s.footerLeft = "opladen: ±18 u"; // BatteryMonitor::FooterText, Level::Day
+				 l.DrawStatus(s);
+			 }},
+			{"23-battery-today", [](ScreenLayout &l)
+			 {
+				 ScreenLayout::Status s;
+				 s.date = "wo 18 nov";
+				 s.device = "WK";
+				 s.battery = 0;
+				 s.bigLabel = "CO₂";
+				 s.bigValue = "612";
+				 s.bigUnit = "ppm";
+				 s.tiles = {{"°C", "20,5"}, {"RV %", "48"}};
+				 s.footerLeft = "laad nu op: ±5 u"; // Level::Today
+				 l.DrawStatus(s);
+			 }},
+			{"24-battery-critical", [](ScreenLayout &l)
+			 { l.DrawMessage("Batterij bijna leeg", {"Sluit de USB-voeding aan.", "Het apparaat meet daarna gewoon verder."},
+							 "lading 4%"); }},
+			{"25-battery-empty", [](ScreenLayout &l)
+			 { l.DrawMessage("Batterij leeg",
+							 {"Het apparaat stopt met meten.", "Sluit de USB-voeding aan; daarna meet het vanzelf verder."},
+							 ""); }}, "P1")); }},
 		};
 		return samples;
 	}

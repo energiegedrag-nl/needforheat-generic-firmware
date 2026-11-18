@@ -254,16 +254,45 @@ void ScreenLayout::WifiSymbol(int x, int y, bool connected, uint32_t colour)
 	}
 }
 
-void ScreenLayout::Header(const std::string &left, const std::string &right, int leftIndent, const std::string &badge)
+int ScreenLayout::BatteryIcon(int x, int battery)
+{
+	// Body 17 x 10 with a nub on the right, centred in the header bar.
+	constexpr int BODY_W = 17, BODY_H = 10, NUB_W = 2, NUB_H = 4;
+	int y = (HEADER_H - BODY_H) / 2;
+	m_canvas.drawRect(x, y, BODY_W, BODY_H, WHITE);
+	m_canvas.fillRect(x + BODY_W, y + (BODY_H - NUB_H) / 2, NUB_W, NUB_H, WHITE);
+	if (battery >= 5)
+	{
+		// USB power: full body with a black lightning bolt.
+		m_canvas.fillRect(x + 1, y + 1, BODY_W - 2, BODY_H - 2, WHITE);
+		m_canvas.fillTriangle(x + 10, y + 1, x + 5, y + 5, x + 9, y + 5, BLACK);
+		m_canvas.fillTriangle(x + 8, y + 4, x + 12, y + 4, x + 7, y + 8, BLACK);
+	}
+	else
+	{
+		// Bars of 2 px with 1 px between them, inside a 1 px margin.
+		for (int i = 0; i < std::max(0, std::min(4, battery)); i++)
+			m_canvas.fillRect(x + 2 + i * 3 + (i > 0 ? i : 0), y + 2, 2, BODY_H - 4, WHITE);
+	}
+	return BODY_W + NUB_W;
+}
+
+void ScreenLayout::Header(const std::string &left, const std::string &right, int leftIndent, const std::string &badge,
+						  int battery)
 {
 	m_canvas.fillRect(0, 0, W, HEADER_H, BLACK);
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextColor(WHITE);
 	constexpr int GAP = 8;
+	constexpr int ICON_W = 19; // BatteryIcon
 
 	// Left text first (it matters most), the right text gets the rest of the bar, the badge sits after the left text.
+	// The battery icon sits just left of the right text.
 	int x = MARGIN + leftIndent;
-	int rightNeeds = right.empty() ? 0 : std::min(m_canvas.textWidth(right.c_str()), W / 2) + GAP;
+	int rightTextW = right.empty() ? 0 : std::min(m_canvas.textWidth(right.c_str()), W / 2);
+	int rightNeeds = (right.empty() ? 0 : rightTextW + GAP) + (battery >= 0 ? ICON_W + GAP / 2 : 0);
+	if (battery >= 0)
+		BatteryIcon(W - MARGIN - (right.empty() ? 0 : rightTextW + GAP / 2) - ICON_W, battery);
 	if (!left.empty())
 	{
 		std::string fitted = Fit(left, W - MARGIN - x - rightNeeds);
@@ -430,7 +459,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	Begin();
 
 	// Header: Wi-Fi symbol and date left, badge (e.g. TEST) in the middle, device label right.
-	Header(status.date, status.device, 22, status.badge);
+	Header(status.date, status.device, 22, status.badge, status.battery);
 	WifiSymbol(MARGIN - 1, HEADER_BASE + 1, status.wifiConnected, WHITE);
 	int bottom = Footer(status.footerLeft, status.footerRight);
 
