@@ -1,5 +1,6 @@
 #include "scheduler.hpp"
 
+#include <cstdio>
 #include <vector>
 #include <algorithm>
 
@@ -21,6 +22,11 @@ constexpr const char *TAG = "Scheduler";
 
 constexpr size_t MAX_TASK_AMOUNT = 23; // 23 because there are 24 bits, but one is used for a restart request.
 constexpr EventBits_t EVENT_REQUEST_RESTART = 1 << 23;
+
+// Longest time all tasks of one round may take together (an OTA download included). A task that hangs (I2C, Bluetooth,
+// a network call) would otherwise keep the device awake and stop all measurements until someone pulls the plug.
+// Measurements waiting on flash survive the restart.
+constexpr int TASKS_TIMEOUT_S = 10 * 60;
 
 namespace Scheduler
 {
@@ -69,6 +75,26 @@ namespace Scheduler
 
 			// Delete this FreeRTOS task.
 			vTaskDelete(nullptr);
+		}
+
+		/**
+		 * Wait until all started tasks have finished; restart the device if that takes longer than TASKS_TIMEOUT_S.
+		 *
+		 * @return the event bits (including a restart request).
+		 */
+		EventBits_t WaitForStartedTasks()
+		{
+			auto bits = xEventGroupWaitBits(s_tasksEventGroup, s_startedTaskBits, pdTRUE, pdTRUE, Delay::Seconds(TASKS_TIMEOUT_S));
+			if ((bits & s_startedTaskBits) != s_startedTaskBits)
+			{
+				for (const auto &task : s_tasks)
+					if ((s_startedTaskBits & (1 << task.id)) && !(bits & (1 << task.id)))
+						ESP_LOGE(TAG, "Task \"%s\" did not finish within %d s.", task.name.c_str(), TASKS_TIMEOUT_S);
+				ESP_LOGE(TAG, "Restarting to recover from a task that hangs.");
+				fflush(stdout);
+				esp_restart();
+			}
+			return bits;
 		}
 
 		/**
@@ -189,7 +215,7 @@ namespace Scheduler
 
 				// Wait for all the bits to be set,
 				// which means all tasks are done.
-				auto bits = xEventGroupWaitBits(s_tasksEventGroup, s_startedTaskBits, pdTRUE, pdTRUE, portMAX_DELAY);
+				auto bits = WaitForStartedTasks();
 
 				ESP_LOGD(TAG, "All tasks have finished running.");
 
@@ -303,7 +329,7 @@ namespace Scheduler
 
 		// Wait for all the bits to be set,
 		// which means all tasks are done.
-		xEventGroupWaitBits(s_tasksEventGroup, s_startedTaskBits, pdTRUE, pdTRUE, portMAX_DELAY);
+		WaitForStartedTasks();
 
 		ESP_LOGD(TAG, "All tasks have finished running.");
 	}
