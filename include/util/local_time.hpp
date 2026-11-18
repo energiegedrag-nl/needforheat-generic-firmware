@@ -157,4 +157,17 @@ namespace LocalTime
 		s.nextOffset_s = static_cast<int32_t>(values[2]);
 		return true;
 	}
+	/** Dutch short weekday, e.g. "wo" (the device has no locale support). */
+	inline const char *WeekdayNl(const struct tm &local)
+	{
+		static const char *const days[] = {"zo", "ma", "di", "wo", "do", "vr", "za"};
+		return days[(local.tm_wday % 7 + 7) % 7];
+	}
+
+	/** Dutch date for the screen header, e.g. "wo 18 nov". */
+	inline std::string DateNl(const struct tm &local)
+	{
+		static const char *const months[] = {"jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"};
+		return std::string(WeekdayNl(local)) + " " + std::to_string(local.tm_mday) + " " + months[(local.tm_mon % 12 + 12) % 12];
+	}
 } // namespace LocalTime

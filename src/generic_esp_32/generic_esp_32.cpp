@@ -160,6 +160,7 @@ namespace GenericESP32Firmware
             LocalTime::Local(utc, DisplayOffsetLocked(), local);
         }
 
+
 #ifdef M5STACK_COREINK
         /** "TEST" for a test server, empty for production; the server name otherwise. */
         std::string ServerBadge()
@@ -1092,18 +1093,14 @@ namespace GenericESP32Firmware
     {
         if (s_wifiEventGroup != nullptr)
             status.wifiConnected = (xEventGroupGetBits(s_wifiEventGroup) & WIFI_CONNECTED_EVENT) != 0;
-        if (status.clock.empty())
-        {
-            time_t now = time(nullptr);
-            struct tm local;
-            LocalTimeForScreen(now, local); // the clock runs in UTC; people read local time
-            if (local.tm_year + 1900 >= 2024) // only a synchronised clock
-            {
-                char text[8];
-                strftime(text, sizeof(text), "%H:%M", &local);
-                status.clock = text;
-            }
-        }
+        // The header shows the date, not a clock: the screen only refreshes with a measurement, so a time of day there
+        // would suggest a live clock. The only time on the screen is that of the last upload, in the footer (18-11).
+        time_t now = time(nullptr);
+        struct tm today;
+        LocalTimeForScreen(now, today); // the clock runs in UTC; people read local time
+        bool synchronised = today.tm_year + 1900 >= 2024;
+        if (status.date.empty() && synchronised)
+            status.date = LocalTime::DateNl(today);
         if (status.badge.empty())
             status.badge = ServerBadge();
         if (status.footerLeft.empty())
@@ -1118,7 +1115,8 @@ namespace GenericESP32Firmware
                 LocalTimeForScreen(lastUpload, local);
                 char text[8];
                 strftime(text, sizeof(text), "%H:%M", &local);
-                status.footerLeft = std::string("verstuurd ") + text;
+                bool sameDay = synchronised && local.tm_year == today.tm_year && local.tm_yday == today.tm_yday;
+                status.footerLeft = std::string("verstuurd ") + (sameDay ? "" : std::string(LocalTime::WeekdayNl(local)) + " ") + text;
             }
             else
                 status.footerLeft = "alles verstuurd";

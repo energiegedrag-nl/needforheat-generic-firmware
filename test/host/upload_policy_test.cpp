@@ -97,6 +97,13 @@ int main()
 	Check(!LocalTime::Parse("3600,1806195600", bad), "parse two values");
 	Check(!LocalTime::Parse("3600,1806195600,7200x", bad), "parse trailing");
 	Check(!LocalTime::Parse("99999,0,3600", bad), "parse implausible");
+	// Screen header date in Dutch, from local time (late evening UTC is already the next day in the Netherlands).
+	struct tm day = {};
+	LocalTime::Local(Utc(2026, 11, 18, 13, 10), fixed, day);
+	Check(LocalTime::DateNl(day) == "wo 18 nov", "date: wednesday 18 november");
+	LocalTime::Local(Utc(2026, 12, 31, 23, 30), fixed, day);
+	Check(LocalTime::DateNl(day) == "vr 1 jan", "date: new year in local time");
+	Check(std::string(LocalTime::WeekdayNl(day)) == "vr", "weekday");
 
 	if (failures)
 	{

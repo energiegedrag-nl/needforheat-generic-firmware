@@ -33,7 +33,7 @@ namespace
 	ScreenLayout::Status Big(const char *label, const char *value, const char *unit)
 	{
 		ScreenLayout::Status s;
-		s.clock = "14:20";
+		s.date = "wo 18 nov";
 		s.badge = "TEST";
 		s.device = "P1";
 		s.bigLabel = label;
@@ -78,7 +78,7 @@ namespace
 			{"07-status-living-room", [](ScreenLayout &l)
 			 {
 				 ScreenLayout::Status s;
-				 s.clock = "14:20";
+				 s.date = "wo 18 nov";
 				 s.badge = "TEST";
 				 s.device = "WK";
 				 s.bigLabel = "CO₂";
@@ -92,7 +92,7 @@ namespace
 			{"08-status-p1", [](ScreenLayout &l)
 			 {
 				 ScreenLayout::Status s;
-				 s.clock = "14:20";
+				 s.date = "wo 18 nov";
 				 s.badge = "TEST";
 				 s.device = "P1";
 				 s.bigLabel = "stroom";
@@ -106,7 +106,7 @@ namespace
 			{"09-status-offline", [](ScreenLayout &l)
 			 {
 				 ScreenLayout::Status s;
-				 s.clock = "03:05";
+				 s.date = "do 19 nov";
 				 s.wifiConnected = false;
 				 s.device = "P1";
 				 s.bigLabel = "stroom";
