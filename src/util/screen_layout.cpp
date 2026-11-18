@@ -287,12 +287,21 @@ void ScreenLayout::Header(const std::string &left, const std::string &right, int
 	constexpr int ICON_W = 19; // BatteryIcon
 
 	// Left text first (it matters most), the right text gets the rest of the bar, the badge sits after the left text.
-	// The battery icon sits just left of the right text.
+	// The battery icon sits just left of the right text. When the date, a badge, the icon and the right text (device
+	// label) do not fit together, the right text is left out: it matters least.
 	int x = MARGIN + leftIndent;
 	int rightTextW = right.empty() ? 0 : std::min(m_canvas.textWidth(right.c_str()), W / 2);
-	int rightNeeds = (right.empty() ? 0 : rightTextW + GAP) + (battery >= 0 ? ICON_W + GAP / 2 : 0);
+	int iconNeeds = battery >= 0 ? ICON_W + GAP / 2 : 0;
+	bool showRight = !right.empty();
+	if (showRight && (battery >= 0 || !badge.empty()))
+	{
+		int leftW = left.empty() ? 0 : m_canvas.textWidth(left.c_str()) + GAP;
+		int badgeW = badge.empty() ? 0 : m_canvas.textWidth(badge.c_str()) + 10 + GAP;
+		showRight = x + leftW + badgeW + iconNeeds + rightTextW <= W - MARGIN;
+	}
+	int rightNeeds = (showRight ? rightTextW + GAP : 0) + iconNeeds;
 	if (battery >= 0)
-		BatteryIcon(W - MARGIN - (right.empty() ? 0 : rightTextW + GAP / 2) - ICON_W, battery);
+		BatteryIcon(W - MARGIN - (showRight ? rightTextW + GAP / 2 : 0) - ICON_W, battery);
 	if (!left.empty())
 	{
 		std::string fitted = Fit(left, W - MARGIN - x - rightNeeds);
@@ -312,10 +321,10 @@ void ScreenLayout::Header(const std::string &left, const std::string &right, int
 		m_canvas.setTextColor(WHITE);
 		x += boxW + GAP;
 	}
-	if (!right.empty())
+	if (showRight)
 	{
 		m_canvas.setTextDatum(textdatum_t::baseline_right);
-		m_canvas.drawString(Fit(right, W - MARGIN - x).c_str(), W - MARGIN, HEADER_BASE);
+		m_canvas.drawString(Fit(right, W - MARGIN - x - iconNeeds).c_str(), W - MARGIN, HEADER_BASE);
 	}
 	m_canvas.setTextColor(BLACK);
 	m_canvas.setTextDatum(textdatum_t::baseline_left);
