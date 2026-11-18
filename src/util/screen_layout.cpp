@@ -386,7 +386,7 @@ std::string ScreenLayout::DrawProvisioningQR(const std::string &payload, const s
 	m_canvas.setFont(m_fonts.text);
 	m_canvas.setTextDatum(textdatum_t::baseline_center);
 	m_canvas.drawString(Fit(deviceName, W - 2 * MARGIN).c_str(), W / 2, PROVISIONING_NAME_BASE);
-	Footer(displayName.empty() ? "" : "via app", version); // short: release candidates have long versions
+	Footer(displayName.empty() ? "" : "Scan met app", version); // with an rc version the left text may be shortened
 	return "prov:" + payload;
 }
 
