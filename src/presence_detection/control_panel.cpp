@@ -113,7 +113,11 @@ namespace ControlPanel
     {
         // Back to the overview (the old info QR screen is not used any more: with an empty info URL nothing was
         // drawn, so the menu stayed on the screen after "terug" and after the time-out).
+#ifdef M5STACK_COREINK
         GenericESP32Firmware::RefreshStatus();
+#else
+        sc.DisplayInfoQR();
+#endif
         menuState = Menu::idle;
 
         // Release bluetooth (doing this after e-ink update screen seems more stable)
