@@ -23,7 +23,7 @@ namespace
 	std::vector<Step> ProvisioningSteps(int stage)
 	{
 		return {
-			{S::Done, "Bluetooth: verbonden"},
+			{S::Done, "Bluetooth: OK"},
 			{S::Done, "Server: TEST"},
 			{stage == 0 ? S::Active : stage == 1 ? S::Failed : S::Done, "Wifi: Thuisnetwerk-5G"},
 			{stage == 2 ? S::Active : S::Todo, "Eerste meting"},
@@ -65,7 +65,7 @@ namespace
 			 { l.DrawProvisioningQR("NFH:EENCWPCNLYASGRLHRGV4333G", "NFH_3C4D5E", "P1-lezer", "v1.1.0-rc.2"); }},
 			{"02a-steps-app-connected", [](ScreenLayout &l)
 			 {
-				 std::vector<Step> steps = {{S::Done, "Bluetooth: verbonden"}, {S::Todo, "Server: TEST"}, {S::Todo, "Wifi"}, {S::Todo, "Eerste meting"}};
+				 std::vector<Step> steps = {{S::Done, "Bluetooth: OK"}, {S::Todo, "Server: TEST"}, {S::Todo, "Wifi"}, {S::Todo, "Eerste meting"}};
 				 l.DrawSteps("Koppelen", "2 van 4", steps, "Kies in de app je wifi-netwerk.", "Houd de app open");
 			 }},
 			{"04b-paired-no-overview-yet", [](ScreenLayout &l)
@@ -77,7 +77,7 @@ namespace
 			 { l.DrawSteps("Koppelen", "3 van 4", ProvisioningSteps(1),
 						   "Klopt het wachtwoord? Is het 2,4 GHz? De module begint opnieuw.", ""); }},
 			{"04-steps-activating", [](ScreenLayout &l)
-			 { l.DrawSteps("Koppelen", "4 van 4", ProvisioningSteps(2), "Aanmelden bij de server en eerste meting versturen...",
+			 { l.DrawSteps("Koppelen", "4 van 4", ProvisioningSteps(2), "Aanmelden en eerste meting versturen...",
 						   "Houd de app open"); }},
 			{"05-activation-failed", [](ScreenLayout &l)
 			 { l.DrawMessage("Activeren lukt niet",
