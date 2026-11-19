@@ -7,7 +7,6 @@
 
 constexpr const char *TAG = "Buttons";
 
-constexpr int LONG_BUTTON_PRESS_DURATION = 10 * 2; // Number of half seconds minus one to wait: (10 s * 2 halfseconds)
 
 namespace Buttons
 {
@@ -60,7 +59,7 @@ namespace Buttons
                     vTaskDelay(Delay::MilliSeconds(500));
 
                     // Call the buttons callback based on the duration of the press.
-                    if (halfSeconds == LONG_BUTTON_PRESS_DURATION)
+                    if (halfSeconds == button->longPressSeconds * 2)
                     {
                         if (button->longPressCallback == nullptr)
                         {
@@ -132,7 +131,8 @@ namespace Buttons
                             const std::string &name,
                             int trigger,
                             ButtonCallback_t cbShort,
-                            ButtonCallback_t cbLong)
+                            ButtonCallback_t cbLong,
+                            int longPressSeconds)
         {
             if (!s_initialized)
                 Init();
@@ -143,6 +143,7 @@ namespace Buttons
             button->trigger = trigger;
             button->shortPressCallback = cbShort;
             button->longPressCallback = cbLong;
+            button->longPressSeconds = longPressSeconds;
 
             ESP_LOGD(TAG, "Button added.\n"
                           "\tGPIO num: %d\n"

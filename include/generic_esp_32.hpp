@@ -106,8 +106,8 @@ namespace GenericESP32Firmware
 
     /**
      * A deliberate action that is only possible **before provisioning**, e.g. calibrating a sensor outdoors.
-     * On the provisioning screen: hold the dial pressed for 10 s (GPIO 38), read the question, and turn the dial down
-     * (GPIO 39) within 30 s to confirm. Refused on USB power (the action is meant for battery power, e.g. in a box
+     * On the provisioning screen: hold the dial pressed for 5 s (GPIO 38), read the question, and turn the dial down
+     * (GPIO 39) within 30 s to confirm. A hint to unplug on (apparent) USB power (the action is meant for battery power, e.g. in a box
      * outdoors, not at a computer). During the action the provisioning power-off timeout is paused; afterwards the
      * provisioning screen returns. run() is called in its own task and may take long (it shows its own progress with
      * DisplayMessage). Not shown on the screen: participants receive provisioned devices and cannot reach it.

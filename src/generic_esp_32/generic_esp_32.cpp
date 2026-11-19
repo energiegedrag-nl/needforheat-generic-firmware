@@ -763,21 +763,17 @@ namespace GenericESP32Firmware
             vTaskDelete(nullptr);
         }
 
-        /** Dial held pressed for 10 s on the provisioning screen: ask for confirmation. */
+        /** Dial held pressed for 5 s on the provisioning screen: ask for confirmation. */
         void PreActionAsk()
         {
             if (!s_provisioningScreen || s_preActionRunning || s_preAction.run == nullptr)
                 return;
+            // USB is a hint, not a refusal: the reading may date from boot (before the cable was pulled), and a full
+            // battery just off the charger looks like USB. Indoors the action itself fails on implausible values.
             BatteryMonitor::Reading battery;
+            std::vector<std::string> paragraphs{s_preAction.question, "Draai het wieltje omlaag om te bevestigen."};
             if (M5CoreInkSpecific::GetBatteryReading(battery) && battery.usb)
-            {
-                s_screen.DisplayMessage(s_preAction.title,
-                                        {"Niet aan USB: haal de kabel los.", "Dit doe je op batterij, bijvoorbeeld buiten in een doos."}, "");
-                vTaskDelay(pdMS_TO_TICKS(10 * 1000));
-                if (s_provisioningScreen && !s_preActionRunning)
-                    ShowProvisioningQR();
-                return;
-            }
+                paragraphs.insert(paragraphs.begin() + 1, "Haal de USB-kabel los, als die er nog in zit.");
             s_preConfirmUntil = xTaskGetTickCount() + pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000);
             // Count down in steps of 5 s (each step is a fast e-ink refresh); stop as soon as it is confirmed.
             constexpr int STEP_S = 5;
@@ -785,8 +781,7 @@ namespace GenericESP32Firmware
             {
                 if (s_preConfirmUntil == 0 || s_preActionRunning || !s_provisioningScreen)
                     break;
-                s_screen.DisplayMessage(s_preAction.title, {s_preAction.question, "Draai het wieltje omlaag om te bevestigen."},
-                                        "nog " + std::to_string(left) + " s");
+                s_screen.DisplayMessage(s_preAction.title, paragraphs, "nog " + std::to_string(left) + " s");
                 vTaskDelay(pdMS_TO_TICKS(STEP_S * 1000));
             }
             if (s_preConfirmUntil != 0 && s_provisioningScreen && !s_preActionRunning)
@@ -821,9 +816,9 @@ namespace GenericESP32Firmware
                 config.pull_up_en = GPIO_PULLUP_ENABLE;
                 gpio_config(&config);
             }
-            // Long press (10 s) on the dial asks; a short turn down confirms. After provisioning the presence menu
+            // Long press (5 s) on the dial asks; a short turn down confirms. After provisioning the presence menu
             // (if any) registers these pins again and takes over.
-            Buttons::ButtonPressHandler::AddButton(GPIO_NUM_38, "Pre-provisioning action", 0, nullptr, PreActionAsk);
+            Buttons::ButtonPressHandler::AddButton(GPIO_NUM_38, "Pre-provisioning action", 0, nullptr, PreActionAsk, 5);
             Buttons::ButtonPressHandler::AddButton(GPIO_NUM_39, "Pre-provisioning confirm", 0, PreActionConfirm, nullptr);
         }
 #endif // M5STACK_COREINK
