@@ -43,6 +43,7 @@ int main()
 		Check(!UploadPolicy::IsRetryable(code), "drop " + std::to_string(code));
 
 	// Activation: only 401/403 are refusals; 500 (device not registered yet on API v3) and no connection are not.
+	Check(UploadPolicy::IsReleased(410) && !UploadPolicy::IsReleased(404) && !UploadPolicy::IsReleased(200), "410 = released");
 	Check(UploadPolicy::IsActivationRefused(401) && UploadPolicy::IsActivationRefused(403), "refused 401/403");
 	for (int code : {-1, 0, 404, 500, 502})
 		Check(!UploadPolicy::IsActivationRefused(code), "not refused " + std::to_string(code));
