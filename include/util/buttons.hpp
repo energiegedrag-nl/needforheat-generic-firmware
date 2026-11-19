@@ -23,6 +23,7 @@ namespace Buttons
         int trigger;
         ButtonCallback_t shortPressCallback;
         ButtonCallback_t longPressCallback;
+        int longPressSeconds = 10; // how long to hold for a long press
     };
 
     /**
@@ -48,6 +49,7 @@ namespace Buttons
                             const std::string &name,
                             int trigger,
                             ButtonCallback_t cbShort,
-                            ButtonCallback_t cbLong);
+                            ButtonCallback_t cbLong,
+                            int longPressSeconds = 10);
     };
 } // namespace Buttons
