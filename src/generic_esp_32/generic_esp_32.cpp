@@ -145,6 +145,7 @@ namespace GenericESP32Firmware
         static M5CoreInkSpecific::PowerOffTimeout s_powerOffTimeout(PRE_PROVISIONING_POWER_OFF_TIMEOUT_S);
 
         static std::string s_provisioningSsid;
+        static bool s_appConnectedShown = false; // "1 van 3" shown after the app connected
 #endif // M5STACK_COREINK
 
         // Forward declare.
@@ -195,21 +196,26 @@ namespace GenericESP32Firmware
             return "Server: " + (badge.empty() ? std::string("productie") : badge);
         }
 
-        /** Provisioning progress on the e-ink screen; stage 0: Wi-Fi being tried, 1: Wi-Fi failed, 2: activating. */
+        /**
+         * Provisioning progress on the e-ink screen; stage -1: app connected (Bluetooth), 0: Wi-Fi being tried,
+         * 1: Wi-Fi failed, 2: activating.
+         */
         void ShowProvisioningProgress(int stage, const std::string &ssid)
         {
             using S = Screen::StepState;
             std::vector<Screen::Step> steps = {
                 {S::Done, "Bluetooth verbonden"},
-                {S::Done, ServerStepLabel()},
-                {stage == 0 ? S::Active : stage == 1 ? S::Failed : S::Done, "Wifi: " + ssid},
+                {stage < 0 ? S::Todo : S::Done, ServerStepLabel()},
+                {stage < 0 ? S::Todo : stage == 0 ? S::Active : stage == 1 ? S::Failed : S::Done,
+                 stage < 0 ? std::string("Wifi") : "Wifi: " + ssid},
                 {stage == 2 ? S::Active : S::Todo, "Activeren"},
             };
             // Short texts: the screen fits about 20 characters per line in a readable size.
-            const char *message = stage == 0 ? "Verbinden met wifi (tot 30 s)..."
+            const char *message = stage < 0    ? "Kies in de app je wifi-netwerk."
+                                : stage == 0 ? "Verbinden met wifi (tot 30 s)..."
                                 : stage == 1 ? "Klopt het wachtwoord? Is het 2,4 GHz? De module begint opnieuw."
                                              : "Aanmelden bij de server...";
-            s_screen.DisplaySteps("Koppelen", stage == 2 ? "3 van 3" : "2 van 3", steps, message,
+            s_screen.DisplaySteps("Koppelen", stage == 2 ? "3 van 3" : stage < 0 ? "1 van 3" : "2 van 3", steps, message,
                                   stage == 1 ? "" : "Houd de app open");
         }
 #endif // M5STACK_COREINK
@@ -261,6 +267,17 @@ namespace GenericESP32Firmware
                         xEventGroupSetBits(s_wifiEventGroup, WIFI_DISCONNECTED_EVENT);
                     }
                     break;
+#ifdef M5STACK_COREINK
+                case WIFI_EVENT_SCAN_DONE:
+                    // On the provisioning screen a Wi-Fi scan means the app has connected over Bluetooth (it asks the
+                    // device for networks first); ESP-IDF 4.2 has no event for the Bluetooth connection itself.
+                    if (s_provisioningScreen && !s_preActionRunning && !s_appConnectedShown)
+                    {
+                        s_appConnectedShown = true;
+                        ShowProvisioningProgress(-1, "");
+                    }
+                    break;
+#endif // M5STACK_COREINK
                 default:
                     break;
                 }
