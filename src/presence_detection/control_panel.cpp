@@ -243,9 +243,10 @@ namespace ControlPanel
                         delete useBluetoothPtr;
                         useBluetoothPtr = nullptr;
                     }
-
-                    break;
                 }
+                // Only "terug" is on this screen: up/down change nothing (they fell through into the delete menu,
+                // with a phone index from an earlier visit).
+                break;
             case Menu::delete_onboarded:
                 if (button == ButtonActions::up)
                 {

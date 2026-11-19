@@ -274,6 +274,8 @@ namespace GenericESP32Firmware
                     if (s_provisioningScreen && !s_preActionRunning && !s_appConnectedShown)
                     {
                         s_appConnectedShown = true;
+                        // A short beep, as when a phone pairs for presence detection: the app is connected.
+                        Buzzer::Buzz(200);
                         ShowProvisioningProgress(-1, "");
                     }
                     break;
@@ -1255,13 +1257,24 @@ namespace GenericESP32Firmware
     void RefreshStatus()
     {
         Screen::Status status;
+        bool haveStatus;
         {
             std::lock_guard<std::mutex> lock(s_lastStatusMutex);
-            if (!s_haveStatus)
-                return;
-            status = s_lastStatus;
+            haveStatus = s_haveStatus;
+            if (haveStatus)
+                status = s_lastStatus;
         }
-        DrawStatus(status);
+        if (haveStatus)
+        {
+            DrawStatus(status);
+            return;
+        }
+#ifdef M5STACK_COREINK
+        // No overview yet (just paired, first measurement not in): still leave the menu, or "terug" seems to do
+        // nothing.
+        s_screen.DisplayMessage(s_shortName.empty() ? std::string("Gekoppeld") : s_shortName,
+                                {"Gekoppeld.", "De eerste meting verschijnt hier binnen enkele minuten."}, "");
+#endif // M5STACK_COREINK
     }
 
     namespace
