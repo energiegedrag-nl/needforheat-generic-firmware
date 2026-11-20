@@ -1284,8 +1284,18 @@ namespace GenericESP32Firmware
     {
     void DrawStatus(Screen::Status status)
     {
-        if (s_wifiEventGroup != nullptr)
-            status.wifiConnected = (xEventGroupGetBits(s_wifiEventGroup) & WIFI_CONNECTED_EVENT) != 0;
+        // Wi-Fi icon: connected to an access point now, or the last upload succeeded recently. The event bit
+        // WIFI_CONNECTED_EVENT is no good here: the connect loops wait for it with clear-on-exit, so it is 0 right
+        // after connecting and the icon showed "no Wi-Fi" all the time (20-11). Between uploads the radio may be off
+        // (light sleep), hence also the last upload: within two upload rounds counts as connected.
+        {
+            wifi_ap_record_t ap{};
+            bool associated = esp_wifi_sta_get_ap_info(&ap) == ESP_OK;
+            time_t last = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
+            time_t nowForWifi = time(nullptr);
+            bool recentUpload = last > 0 && nowForWifi >= last && nowForWifi - last <= 25 * 60;
+            status.wifiConnected = associated || recentUpload;
+        }
         // The header shows the date, not a clock: the screen only refreshes with a measurement, so a time of day there
         // would suggest a live clock. The only time on the screen is that of the last upload, in the footer (18-11).
         time_t now = time(nullptr);
