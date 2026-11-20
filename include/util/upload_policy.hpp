@@ -20,6 +20,17 @@ namespace UploadPolicy
 	}
 
 	/**
+	 * The researcher released this device for another participant (needforheat-server-api: device.released_at, upload
+	 * answer 410 Gone). Its pairing belongs to the previous participant: the device drops what it still buffers (that
+	 * would land with nobody) and forgets its pairing and Wi-Fi, so it shows the provisioning QR code for the next
+	 * participant. The activation secret, and so the QR code and label, stay the same.
+	 */
+	inline bool IsReleased(int statusCode)
+	{
+		return statusCode == 410;
+	}
+
+	/**
 	 * The server refuses this device's activation secret (403) or request (401). A device that is not registered
 	 * yet, or a server error, gives another code (500 on API v3): then the app may simply not have registered the
 	 * device yet, and trying again helps.

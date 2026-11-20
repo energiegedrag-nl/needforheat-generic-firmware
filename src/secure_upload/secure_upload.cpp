@@ -85,6 +85,31 @@ namespace SecureUpload
 		}
 
 		/**
+		 * The server answered 410: the researcher released this device for another participant. Drop the persistent
+		 * buffer (those measurements would land with nobody), forget the pairing and Wi-Fi and restart: the device then
+		 * shows the provisioning QR code. See UploadPolicy::IsReleased.
+		 */
+		[[noreturn]] void ForgetPairing()
+		{
+			ESP_LOGW(TAG, "Device released for another participant (410): forgetting pairing and buffered measurements.");
+			auto &store = PersistentStore::GetInstance();
+			if (store.Available())
+			{
+				std::vector<FlashLog::Record> records;
+				std::vector<Measurements::Measurement> measurements;
+				while (store.Peek(64, records, measurements) > 0)
+				{
+					store.Consume(records);
+					records.clear();
+					measurements.clear();
+				}
+			}
+			GenericESP32Firmware::ResetWireless(); // erases the bearer and Wi-Fi, restarts
+			while (true)
+				;
+		}
+
+		/**
 		 * Post measurements to the backend in one upload. Returns the HTTP status code (<= 0: no connection).
 		 */
 		int PostMeasurements(const std::vector<Measurements::Measurement *> &items)
@@ -108,6 +133,8 @@ namespace SecureUpload
 			HTTPUtil::headers_t headersSend;
 			HTTPUtil::headers_t headersReceive;
 			int statusCode = GenericESP32Firmware::PostHTTPSToBackend(ENDPOINT_VARIABLE_UPLOAD, dataSend, headersSend, dataReceive, headersReceive, true);
+			if (UploadPolicy::IsReleased(statusCode))
+				ForgetPairing(); // does not return
 			if (statusCode != 200)
 				ESP_LOGE(TAG, "Posting to backend returned statuscode %d. Response: %s", statusCode, dataReceive.c_str());
 			else
