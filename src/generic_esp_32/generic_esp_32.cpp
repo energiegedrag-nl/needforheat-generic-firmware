@@ -203,19 +203,22 @@ namespace GenericESP32Firmware
         void ShowProvisioningProgress(int stage, const std::string &ssid)
         {
             using S = Screen::StepState;
+            // Same four steps, in the same order and with the same words, as the app's "Koppelen" timeline
+            // (Bluetooth, Server, Wifi, Eerste meting); each side words them from its own point of view.
             std::vector<Screen::Step> steps = {
-                {S::Done, "Bluetooth verbonden"},
+                {S::Done, "Bluetooth: OK"},
                 {stage < 0 ? S::Todo : S::Done, ServerStepLabel()},
                 {stage < 0 ? S::Todo : stage == 0 ? S::Active : stage == 1 ? S::Failed : S::Done,
                  stage < 0 ? std::string("Wifi") : "Wifi: " + ssid},
-                {stage == 2 ? S::Active : S::Todo, "Activeren"},
+                {stage == 2 ? S::Active : S::Todo, "Eerste meting"},
             };
             // Short texts: the screen fits about 20 characters per line in a readable size.
             const char *message = stage < 0    ? "Kies in de app je wifi-netwerk."
                                 : stage == 0 ? "Verbinden met wifi (tot 30 s)..."
                                 : stage == 1 ? "Klopt het wachtwoord? Is het 2,4 GHz? De module begint opnieuw."
-                                             : "Aanmelden bij de server...";
-            s_screen.DisplaySteps("Koppelen", stage == 2 ? "3 van 3" : stage < 0 ? "1 van 3" : "2 van 3", steps, message,
+                                             : "Aanmelden en eerste meting versturen...";
+            // The counter follows the rows: the number of the step being worked on.
+            s_screen.DisplaySteps("Koppelen", stage == 2 ? "4 van 4" : stage < 0 ? "2 van 4" : "3 van 4", steps, message,
                                   stage == 1 ? "" : "Houd de app open");
         }
 #endif // M5STACK_COREINK
@@ -274,6 +277,8 @@ namespace GenericESP32Firmware
                     if (s_provisioningScreen && !s_preActionRunning && !s_appConnectedShown)
                     {
                         s_appConnectedShown = true;
+                        // A short beep, as when a phone pairs for presence detection: the app is connected.
+                        Buzzer::Buzz(200);
                         ShowProvisioningProgress(-1, "");
                     }
                     break;
@@ -1255,13 +1260,24 @@ namespace GenericESP32Firmware
     void RefreshStatus()
     {
         Screen::Status status;
+        bool haveStatus;
         {
             std::lock_guard<std::mutex> lock(s_lastStatusMutex);
-            if (!s_haveStatus)
-                return;
-            status = s_lastStatus;
+            haveStatus = s_haveStatus;
+            if (haveStatus)
+                status = s_lastStatus;
         }
-        DrawStatus(status);
+        if (haveStatus)
+        {
+            DrawStatus(status);
+            return;
+        }
+#ifdef M5STACK_COREINK
+        // No overview yet (just paired, first measurement not in): still leave the menu, or "terug" seems to do
+        // nothing.
+        s_screen.DisplayMessage(s_shortName.empty() ? std::string("Gekoppeld") : s_shortName,
+                                {"Gekoppeld.", "De eerste meting verschijnt hier binnen enkele minuten."}, "");
+#endif // M5STACK_COREINK
     }
 
     namespace
