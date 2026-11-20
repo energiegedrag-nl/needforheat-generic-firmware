@@ -101,7 +101,7 @@ void Screen::DisplayMessage(const std::string &title, const std::vector<std::str
 void Screen::DisplayStatus(const Status &status)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_mutex);
-	if (m_screenKey.rfind("menu", 0) == 0 && xTaskGetTickCount() - m_lastMenuTick < pdMS_TO_TICKS(MENU_IDLE_S * 1000))
+	if (m_menuOpen && m_screenKey.rfind("menu", 0) == 0 && xTaskGetTickCount() - m_lastMenuTick < pdMS_TO_TICKS(MENU_IDLE_S * 1000))
 		return;
 	ScreenLayout layout(m_canvas);
 	Push(layout.DrawStatus(status));
@@ -115,7 +115,14 @@ void Screen::DrawMenu(std::vector<std::string> menuLines, int highlightedLine)
 	ScreenLayout layout(m_canvas);
 	auto key = layout.DrawMenu(menuLines, highlightedLine);
 	m_lastMenuTick = xTaskGetTickCount();
+	m_menuOpen = true;
 	Push(key);
+}
+
+void Screen::CloseMenu()
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+	m_menuOpen = false;
 }
 
 void Screen::SetInfoQRDetails(const std::string &payload, int padding, const std::string &text)
