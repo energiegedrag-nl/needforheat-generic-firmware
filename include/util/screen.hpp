@@ -65,8 +65,8 @@ public:
 
 	/**
 	 * Overview screen. Repeated calls with the same layout use a fast refresh.
-	 * Skipped while a menu is in use (drawn less than MENU_IDLE_S seconds ago), so a measurement does not
-	 * replace the menu under someone's fingers.
+	 * Skipped while a menu is in use (drawn less than MENU_IDLE_S seconds ago and not closed with CloseMenu()),
+	 * so a measurement does not replace the menu under someone's fingers.
 	 */
 	void DisplayStatus(const Status &status);
 
@@ -82,6 +82,12 @@ public:
 	 * @param highlightedLine index of the highlighted item.
 	 */
 	void DrawMenu(std::vector<std::string> lines, int highlightedLine);
+
+	/**
+	 * The menu was left on purpose ("terug" or time-out): the next DisplayStatus() draws again at once. Without this,
+	 * "terug" in the top menu did nothing, because DisplayStatus() still saw a menu in use (20-11).
+	 */
+	void CloseMenu();
 
 	/**
 	 * Wait until the panel has finished refreshing and put it to sleep; call before cutting power, so the image
@@ -111,6 +117,7 @@ private:
 	bool m_asleep = false; // panel put to sleep by PrepareForPowerOff(); woken up by the next Push()
 	int m_fastRefreshes = 0;
 	TickType_t m_lastMenuTick = 0;
+	bool m_menuOpen = false; // set by DrawMenu(), cleared by CloseMenu()
 	std::string m_screenKey; // identifies the layout on screen, to choose between a full and a fast refresh
 	std::recursive_mutex m_mutex;
 };
