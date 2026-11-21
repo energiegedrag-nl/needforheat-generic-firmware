@@ -80,6 +80,9 @@ namespace GenericESP32Firmware
      */
     bool EnsureWifi(int maxWaitMs = 20 * 1000);
 
+    /** "Nu meten" in the device menu: try Wi-Fi in this round even when the battery backoff would skip it. */
+    void RequestWifiAttempt();
+
     /**
      * Blink an LED on the device.
      *

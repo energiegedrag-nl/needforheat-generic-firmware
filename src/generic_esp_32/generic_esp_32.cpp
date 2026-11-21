@@ -16,9 +16,13 @@
 
 #include <cJSON.h>
 
+#include <algorithm>
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+
+#include <esp_timer.h>
 #include <vector>
 
 #include <util/error.hpp>
@@ -135,6 +139,90 @@ namespace GenericESP32Firmware
 
         static EventGroupHandle_t s_wifiEventGroup;
         static bool s_wifiInitialized = false;
+
+        // Wi-Fi after provisioning (21-11). Without this a device that stays on gave up after 10 quick retries when
+        // its network went away and never connected again; on battery every boot searched up to 5 minutes and then
+        // restarted. Now: on mains power (USB) reconnect in the background with exponential backoff (30 s doubling to
+        // 10 min); on battery a short search per boot and, after failures, a search in fewer rounds (1, 2, 4, then
+        // every 6th round, about once an hour). Measurements are kept meanwhile; "Nu meten" tries at once.
+        constexpr int RECONNECT_FIRST_S = 30;
+        constexpr int RECONNECT_MAX_S = 10 * 60;
+        constexpr int MAINS_CONNECT_BUDGET_MS = 60 * 1000;
+        constexpr int BATTERY_CONNECT_BUDGET_MS = 20 * 1000;
+        constexpr uint32_t BATTERY_MAX_SKIP_ROUNDS = 5;
+        static std::atomic<bool> s_wifiStarted{false};      // StartWireless ran: provisioned, normal operation
+        static std::atomic<bool> s_skipWifiThisRound{false}; // on battery: no search this round (backoff)
+        static std::atomic<int> s_reconnectDelay_s{RECONNECT_FIRST_S};
+        static std::atomic<time_t> s_wifiLostAt{0};
+        static std::atomic<time_t> s_nextWifiAttemptAt{0};
+        static esp_timer_handle_t s_reconnectTimer = nullptr;
+        static std::atomic<bool> s_reconnectPending{false}; // a reconnect is scheduled on s_reconnectTimer
+
+        /** On mains power (USB) the device stays on; on battery the CoreInk switches off between rounds. */
+        bool OnMains()
+        {
+#ifdef M5STACK_COREINK
+            BatteryMonitor::Reading battery;
+            return !M5CoreInkSpecific::GetBatteryReading(battery) || battery.usb;
+#else
+            return true;
+#endif
+        }
+
+        void ReconnectNow(void *)
+        {
+            if (!s_wifiStarted || s_skipWifiThisRound)
+                return;
+            s_reconnectPending = false;
+            ESP_LOGI(TAG, "Wi-Fi: trying to connect again.");
+            s_nextWifiAttemptAt = 0;
+            s_wifiConnectRetries = 0;
+            esp_wifi_connect();
+        }
+
+        /** After the quick retries failed: the next attempt after the backoff delay, which then doubles. */
+        void ScheduleReconnect()
+        {
+            if (!s_wifiStarted || s_skipWifiThisRound)
+                return;
+            if (s_reconnectTimer == nullptr)
+            {
+                esp_timer_create_args_t args = {};
+                args.callback = ReconnectNow;
+                args.name = "wifi_reconnect";
+                if (esp_timer_create(&args, &s_reconnectTimer) != ESP_OK)
+                    return;
+            }
+            bool expected = false;
+            if (!s_reconnectPending.compare_exchange_strong(expected, true))
+                return; // already scheduled
+            int delay_s = s_reconnectDelay_s;
+            if (esp_timer_start_once(s_reconnectTimer, static_cast<uint64_t>(delay_s) * 1000000ULL) != ESP_OK)
+            {
+                s_reconnectPending = false;
+                return;
+            }
+            s_nextWifiAttemptAt = time(nullptr) + delay_s;
+            s_reconnectDelay_s = std::min(delay_s * 2, RECONNECT_MAX_S);
+            ESP_LOGI(TAG, "Wi-Fi: next attempt in %d s.", delay_s);
+        }
+
+        /** Connected: the backoff starts again at the beginning. */
+        void WifiConnected()
+        {
+            s_reconnectDelay_s = RECONNECT_FIRST_S;
+            s_wifiLostAt = 0;
+            s_nextWifiAttemptAt = 0;
+            if (s_reconnectTimer != nullptr)
+                esp_timer_stop(s_reconnectTimer);
+            s_reconnectPending = false;
+            uint32_t fails = 0;
+            if (NVS::Get(NVS_NAMESPACE, "wifi_fail", fails) == ESP_OK && fails > 0)
+            {
+                NVS::Set(NVS_NAMESPACE, "wifi_fail", static_cast<uint32_t>(0));
+                NVS::Set(NVS_NAMESPACE, "wifi_skip", static_cast<uint32_t>(0));
+            }
+        }
         static int s_wifiConnectRetries = 0;
 
         static bool s_postProvisioningNeeded = false;
@@ -270,6 +358,12 @@ namespace GenericESP32Firmware
                     {
                         ESP_LOGD(TAG, "Disconnected.");
                         xEventGroupSetBits(s_wifiEventGroup, WIFI_DISCONNECTED_EVENT);
+                        if (s_wifiStarted)
+                        {
+                            time_t expected = 0;
+                            s_wifiLostAt.compare_exchange_strong(expected, time(nullptr));
+                            ScheduleReconnect();
+                        }
                     }
                     break;
 #ifdef M5STACK_COREINK
@@ -298,6 +392,8 @@ namespace GenericESP32Firmware
                              IP2STR(&((ip_event_got_ip_t *)eventData)->ip_info.ip));
                     xEventGroupSetBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT);
                     s_wifiConnectRetries = 0;
+                    if (s_wifiStarted)
+                        WifiConnected();
                     break;
                 default:
                     break;
@@ -727,42 +823,50 @@ namespace GenericESP32Firmware
          */
         esp_err_t StartWireless()
         {
+            s_wifiStarted = true;
+            bool mains = OnMains();
+            if (!s_wifiInitialized && !mains)
+            {
+                // On battery after failed searches: skip the search in some rounds (kept across boots in NVS).
+                uint32_t skip = 0;
+                if (NVS::Get(NVS_NAMESPACE, "wifi_skip", skip) == ESP_OK && skip > 0)
+                {
+                    NVS::Set(NVS_NAMESPACE, "wifi_skip", skip - 1);
+                    s_skipWifiThisRound = true;
+                    ESP_LOGI(TAG, "On battery without Wi-Fi earlier: no search this round (%u more).",
+                             static_cast<unsigned>(skip - 1));
+                    return ESP_OK;
+                }
+            }
+
             auto err = esp_wifi_start();
             Error::CheckAppendName(err, TAG, "An error occured when starting Wi-Fi.");
 
             if (s_wifiInitialized)
-                return ESP_OK;
+                return ESP_OK; // just provisioned: already connected
 
-            for (int tries = 1; tries <= WIFI_MAX_CONNECT_TRIES; tries++)
+            int budget = mains ? MAINS_CONNECT_BUDGET_MS : BATTERY_CONNECT_BUDGET_MS;
+            auto bits = xEventGroupWaitBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT, true, true, Delay::MilliSeconds(budget));
+            if (bits & WIFI_CONNECTED_EVENT)
+                return err;
+
+            // No restart any more: the device measures on and keeps the measurements until Wi-Fi is back.
+            ESP_LOGW(TAG, "No Wi-Fi after %d s (%s); measuring on, uploading later.", budget / 1000,
+                     mains ? "mains" : "battery");
+            time_t expected = 0;
+            s_wifiLostAt.compare_exchange_strong(expected, time(nullptr));
+            if (mains)
+                ScheduleReconnect();
+            else
             {
-                auto bits = xEventGroupWaitBits(s_wifiEventGroup,
-                                                WIFI_CONNECTED_EVENT,
-                                                true,
-                                                true,
-                                                Delay::MilliSeconds(WIFI_MAX_WAIT_MS));
-                // If Wi-Fi is connected, we are done.
-                if (bits & WIFI_CONNECTED_EVENT)
-                    break;
-
-                ESP_LOGD(TAG,
-                         "Failed to connect to Wi-Fi (%d/%d) at %s",
-                         tries,
-                         WIFI_MAX_CONNECT_TRIES,
-                         esp_log_system_timestamp());
-
-                if (tries == WIFI_MAX_CONNECT_TRIES)
-                {
-                    // Restart device after maximum tries.
-
-                    ESP_LOGD(TAG, "Minimum free heap size: %d bytes", esp_get_minimum_free_heap_size());
-
-                    ESP_LOGE(TAG, "Could still not get connection; restarting now.");
-
-                    fflush(stdout);
-                    esp_restart();
-                }
+                uint32_t fails = 0;
+                NVS::Get(NVS_NAMESPACE, "wifi_fail", fails);
+                fails++;
+                uint32_t skip = std::min((1u << std::min<uint32_t>(fails - 1, 5)) - 1, BATTERY_MAX_SKIP_ROUNDS);
+                NVS::Set(NVS_NAMESPACE, "wifi_fail", fails);
+                NVS::Set(NVS_NAMESPACE, "wifi_skip", skip);
+                s_skipWifiThisRound = true; // no more searching in this round (the upload would try again)
             }
-
             return err;
         }
 
@@ -1258,9 +1362,12 @@ namespace GenericESP32Firmware
         wifi_ap_record_t ap{};
         if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK)
             return true;
-        if (!s_wifiInitialized)
+        if (!s_wifiStarted)
             return false; // still provisioning: the provisioning manager handles Wi-Fi
+        if (s_skipWifiThisRound)
+            return false; // on battery: not in this round (backoff); "Nu meten" lifts it
         ESP_LOGI(TAG, "Not connected to Wi-Fi before an upload: trying again.");
+        esp_wifi_start(); // the radio may not have been started this round
         s_wifiConnectRetries = 0;
         xEventGroupClearBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT | WIFI_DISCONNECTED_EVENT); // no stale bit
         esp_wifi_connect();
@@ -1270,6 +1377,16 @@ namespace GenericESP32Firmware
         ESP_LOGI(TAG, "Wi-Fi %s (bits %u).", connected ? "connected again" : "still not connected",
                  static_cast<unsigned>(bits));
         return connected;
+    }
+
+    void RequestWifiAttempt()
+    {
+        s_skipWifiThisRound = false;
+        s_reconnectDelay_s = RECONNECT_FIRST_S;
+        NVS::Set(NVS_NAMESPACE, "wifi_skip", static_cast<uint32_t>(0));
+        if (s_reconnectTimer != nullptr)
+            esp_timer_stop(s_reconnectTimer);
+        s_reconnectPending = false;
     }
 
     void BlinkLED(gpio_num_t gpioNum, int amount)
@@ -1354,6 +1471,23 @@ namespace GenericESP32Firmware
         lines.push_back("Wifi: " + (ssid.empty() ? std::string("onbekend") : ssid));
         if (associated)
             lines.push_back("Signaal: " + std::to_string(ap.rssi) + " dBm");
+        else
+        {
+            auto clock = [](time_t t)
+            {
+                struct tm local;
+                LocalTimeForScreen(t, local);
+                char text[8];
+                std::snprintf(text, sizeof(text), "%02d:%02d", local.tm_hour, local.tm_min);
+                return std::string(text);
+            };
+            if (s_wifiLostAt > 0)
+                lines.push_back("Wifi weg sinds " + clock(s_wifiLostAt));
+            if (s_nextWifiAttemptAt > 0)
+                lines.push_back("Nieuwe poging " + clock(s_nextWifiAttemptAt));
+            else if (s_skipWifiThisRound)
+                lines.push_back("Zoekt minder vaak");
+        }
         time_t last = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
         if (last > 0)
         {
