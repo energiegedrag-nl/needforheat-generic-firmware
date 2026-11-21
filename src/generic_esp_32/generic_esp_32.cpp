@@ -1253,6 +1253,25 @@ namespace GenericESP32Firmware
         esp_restart();
     }
 
+    bool EnsureWifi(int maxWaitMs)
+    {
+        wifi_ap_record_t ap{};
+        if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK)
+            return true;
+        if (!s_wifiInitialized)
+            return false; // still provisioning: the provisioning manager handles Wi-Fi
+        ESP_LOGI(TAG, "Not connected to Wi-Fi before an upload: trying again.");
+        s_wifiConnectRetries = 0;
+        xEventGroupClearBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT | WIFI_DISCONNECTED_EVENT); // no stale bit
+        esp_wifi_connect();
+        auto bits = xEventGroupWaitBits(s_wifiEventGroup, WIFI_CONNECTED_EVENT | WIFI_DISCONNECTED_EVENT, pdFALSE,
+                                        pdFALSE, Delay::MilliSeconds(maxWaitMs));
+        bool connected = esp_wifi_sta_get_ap_info(&ap) == ESP_OK;
+        ESP_LOGI(TAG, "Wi-Fi %s (bits %u).", connected ? "connected again" : "still not connected",
+                 static_cast<unsigned>(bits));
+        return connected;
+    }
+
     void BlinkLED(gpio_num_t gpioNum, int amount)
     {
         auto level = gpio_get_level(gpioNum);
