@@ -163,6 +163,8 @@ namespace
 							 "terug"},
 							0);
 			 }},
+			{"36-menu-status-detail", [](ScreenLayout &l)
+			 { l.DrawMessage("Status", {"Wifi: Fritz!Box 7590 VR gastnetwerk"}, "indrukken: terug"); }},
 			{"34-menu-confirm-wifi", [](ScreenLayout &l)
 			 { l.DrawMenu({"Wifi opnieuw?", "Nee", "Ja, wifi vergeten"}, 1); }},
 			{"35-status-three-tiles-wide", [](ScreenLayout &l)

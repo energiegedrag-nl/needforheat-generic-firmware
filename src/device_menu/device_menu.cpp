@@ -40,6 +40,7 @@ namespace DeviceMenu
             Idle,
             Main,
             Page,
+            Detail,
             Confirm,
             Submenu,
             Qr
@@ -120,6 +121,13 @@ namespace DeviceMenu
             lines.insert(lines.end(), s_page.begin(), s_page.end());
             lines.push_back("terug");
             Display().DrawMenu(lines, s_highlight); // 0: nothing highlighted; up and down scroll
+        }
+
+        /** One line of a page in full (lines longer than the screen end in ".." on the page), wrapped. */
+        void OpenDetail(int line)
+        {
+            s_state = State::Detail;
+            Display().DisplayMessage(s_pageTitle, {s_page[line - 1]}, "indrukken: terug");
         }
 
         void OpenPage(const std::string &title, std::vector<std::string> lines)
@@ -278,13 +286,21 @@ namespace DeviceMenu
                     s_highlight = Wrap(s_highlight + (button == EV_DOWN ? 1 : -1), 0, last);
                     DrawPage();
                 }
+                else if (s_highlight >= 1 && s_highlight <= static_cast<int>(s_page.size()))
+                    OpenDetail(s_highlight); // a line: show it in full; "terug" from there returns to the page
                 else
                 {
+                    // "terug" (or nothing highlighted): back to the main menu
                     s_highlight = 1;
                     ShowMain();
                 }
                 break;
             }
+            case State::Detail:
+                // Any button: back to the page, with the same line highlighted.
+                s_state = State::Page;
+                DrawPage();
+                break;
             case State::Confirm:
                 if (button == EV_UP || button == EV_DOWN)
                 {
