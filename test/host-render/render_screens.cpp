@@ -96,7 +96,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}, {"icon:person", "2"}};
+				 s.tiles = {{"icon:temperature", "20,5°C"}, {"icon:humidity", "48%"}, {"icon:person", "2"}};
 				 s.footerLeft = "icon:uploaded 14:10";
 				 s.footerRight = "icon:info";
 				 l.DrawStatus(s);
@@ -137,6 +137,47 @@ namespace
 							 "Galaxy A54", "Fairphone 5", "terug"},
 							6);
 			 }},
+			// The device menu (DeviceMenu, 21-11): main menu, the Status and Batterij pages, a confirmation.
+			{"30-device-menu", [](ScreenLayout &l)
+			 {
+				 l.DrawMenu({"Menu", "Smartphones", "Status", "Batterij", "Nu meten", "Scherm verversen", "Info",
+							 "Wifi opnieuw", "Herstarten", "terug"},
+							1);
+			 }},
+			{"31-device-menu-bottom", [](ScreenLayout &l)
+			 {
+				 l.DrawMenu({"Menu", "Smartphones", "Status", "Batterij", "Nu meten", "Scherm verversen", "Info",
+							 "Wifi opnieuw", "Herstarten", "terug"},
+							8);
+			 }},
+			{"32-menu-status", [](ScreenLayout &l)
+			 {
+				 l.DrawMenu({"Status", "FE2E-979798", "Firmware 1.2.0r16", "Server: productie", "Wifi: terhofte",
+							 "Signaal: -61 dBm", "Verstuurd: 14:32", "Laatste code: 200", "Onverzonden: 0",
+							 "Kalibratie: +22 ppm", "terug"},
+							0);
+			 }},
+			{"33-menu-battery", [](ScreenLayout &l)
+			 {
+				 l.DrawMenu({"Batterij", "Spanning: 3,95 V", "Lading: 78%", "Voeding: nee, batterij", "Nog: ±18 u",
+							 "terug"},
+							0);
+			 }},
+			{"34-menu-confirm-wifi", [](ScreenLayout &l)
+			 { l.DrawMenu({"Wifi opnieuw?", "Nee", "Ja, wifi vergeten"}, 1); }},
+			{"35-status-three-tiles-wide", [](ScreenLayout &l)
+			 {
+				 ScreenLayout::Status s;
+				 s.date = "za 21 nov";
+				 s.device = "Woonkamer";
+				 s.battery = 5;
+				 s.bigLabel = "CO₂";
+				 s.bigValue = "612";
+				 s.bigUnit = "ppm";
+				 s.tiles = {{"icon:temperature", "-10,5°C"}, {"icon:humidity", "100%"}, {"icon:person", "12"}};
+				 s.footerLeft = "icon:uploaded 14:10";
+				 l.DrawStatus(s);
+			 }},
 			// The widest values that occur at home: they must fit with their unit.
 			{"11-status-co2-high", [](ScreenLayout &l)
 			 { l.DrawStatus(Big("CO₂", "1850", "ppm")); }},
@@ -171,7 +212,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}};
+				 s.tiles = {{"icon:temperature", "20,5°C"}, {"icon:humidity", "48%"}};
 				 s.footerLeft = "opladen: ±18 u"; // BatteryMonitor::FooterText, Level::Day
 				 l.DrawStatus(s);
 			 }},
@@ -184,7 +225,7 @@ namespace
 				 s.bigLabel = "CO₂";
 				 s.bigValue = "612";
 				 s.bigUnit = "ppm";
-				 s.tiles = {{"icon:temperature", "20,5°"}, {"icon:humidity", "48%"}};
+				 s.tiles = {{"icon:temperature", "20,5°C"}, {"icon:humidity", "48%"}};
 				 s.footerLeft = "laad nu op: ±5 u"; // Level::Today
 				 l.DrawStatus(s);
 			 }},

@@ -1,4 +1,5 @@
 #include "platform_esp32_dev.hpp"
+#include <scheduler.hpp>
 
 #include <ctime>
 
@@ -26,8 +27,7 @@ namespace ESP32Dev
 
         ESP_LOGD(TAG, "Delaying for %li seconds", inactiveTime_s);
 
-        // Delay until the next task time.
-        auto lastWakeTime = xTaskGetTickCount();
-        vTaskDelayUntil(&lastWakeTime, Delay::Seconds(inactiveTime_s));
+        // Delay until the next task time (or less when all tasks are asked to run now).
+        Scheduler::DelayOrRunNow(Delay::Seconds(inactiveTime_s));
     }
 } // namespace ESP32Dev

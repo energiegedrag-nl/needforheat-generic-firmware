@@ -589,20 +589,39 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 		DrawLabel(status.bigUnit, unitX, STATUS_BIG_BASE, W - MARGIN - unitX);
 	}
 
-	// Tiles.
+	// Tiles. Each tile is as wide as its value needs in the value font (plus its inner margins); what is left is shared
+	// equally. So "20,5°C" gets a wider tile than "48%" or "2" and keeps the large font (21-11). When the values do
+	// not fit together, all tiles get the same width and a value that does not fit gets a smaller font, as before.
 	size_t n = std::min<size_t>(status.tiles.size(), 3);
 	if (n > 0)
 	{
-		int tileW = W / static_cast<int>(n);
-		m_canvas.fillRect(0, STATUS_TILES_LINE, W, 2, BLACK);
+		std::vector<int> widths(n, W / static_cast<int>(n));
+		m_canvas.setFont(m_fonts.value);
+		int needed = 0;
+		std::vector<int> need(n);
 		for (size_t i = 0; i < n; i++)
 		{
-			int tx = static_cast<int>(i) * tileW;
+			int inner = (i > 0 ? 4 : MARGIN) + 2;
+			need[i] = m_canvas.textWidth(status.tiles[i].second.c_str()) + inner;
+			needed += need[i];
+		}
+		if (needed <= W)
+		{
+			int spare = (W - needed) / static_cast<int>(n);
+			for (size_t i = 0; i < n; i++)
+				widths[i] = need[i] + spare;
+		}
+		m_canvas.fillRect(0, STATUS_TILES_LINE, W, 2, BLACK);
+		int tx = 0;
+		for (size_t i = 0; i < n; i++)
+		{
 			if (i > 0)
 				m_canvas.fillRect(tx - 1, STATUS_TILES_LINE, 2, bottom - STATUS_TILES_LINE, BLACK);
 			int textX = tx + (i > 0 ? 4 : MARGIN);
-			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder of W / n.
-			int maxW = (i + 1 == n ? W : tx + tileW) - textX - 2;
+			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder.
+			int tileEnd = i + 1 == n ? W : tx + widths[i];
+			int maxW = tileEnd - textX - 2;
+			tx = tileEnd;
 			m_canvas.setFont(m_fonts.text);
 			DrawLabelOrIcon(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, STATUS_TILES_LINE + 4, maxW);
 			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})

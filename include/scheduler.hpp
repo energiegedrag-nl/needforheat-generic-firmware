@@ -152,4 +152,16 @@ namespace Scheduler
 	 * This will immediately restart the ESP32 when all tasks are done.
 	 */
 	void RequestRestart();
+
+	/**
+	 * Run all tasks now (measure and upload), without waiting for the next interval; e.g. from the device menu
+	 * ("Nu meten"). If a round is running, the next round starts right after it.
+	 */
+	void RequestRunNow();
+
+	/**
+	 * Wait for the given time, or less when RequestRunNow() is called meanwhile (used by the platform code between
+	 * rounds). Returns true when woken by RequestRunNow().
+	 */
+	bool DelayOrRunNow(TickType_t ticks);
 } // namespace Scheduler

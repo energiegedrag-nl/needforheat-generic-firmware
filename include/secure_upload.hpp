@@ -41,6 +41,9 @@ namespace SecureUpload
         /** Time of the last successful upload in this boot (0: none yet), e.g. for the screen. */
         time_t LastSuccessfulUpload() const;
 
+        /** HTTP status of the last upload attempt in this boot (0: none yet; negative: no connection). */
+        int LastStatusCode() const;
+
     private:
         /**
          * Create a new queue.

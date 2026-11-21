@@ -40,6 +40,7 @@ namespace SecureUpload
 	{
 		/** Time of the last successful upload in this boot (0: none yet). */
 		time_t s_lastSuccessfulUpload = 0;
+		volatile int s_lastStatusCode = 0;
 
 		/**
 		 * A timestamp is plausible if its year lies between the firmware build year - 1 and + 10.
@@ -133,6 +134,7 @@ namespace SecureUpload
 			HTTPUtil::headers_t headersSend;
 			HTTPUtil::headers_t headersReceive;
 			int statusCode = GenericESP32Firmware::PostHTTPSToBackend(ENDPOINT_VARIABLE_UPLOAD, dataSend, headersSend, dataReceive, headersReceive, true);
+			s_lastStatusCode = statusCode;
 			if (UploadPolicy::IsReleased(statusCode))
 				ForgetPairing(); // does not return
 			if (statusCode != 200)
@@ -164,6 +166,11 @@ namespace SecureUpload
 		auto err = xQueueSend(m_measurementQueue, &measurementPtr, 0);
 		if (err != pdTRUE)
 			ESP_LOGE(TAG, "An error occured when adding an item to the queue: no space.");
+	}
+
+	int Queue::LastStatusCode() const
+	{
+		return s_lastStatusCode;
 	}
 
 	time_t Queue::LastSuccessfulUpload() const

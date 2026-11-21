@@ -8,6 +8,9 @@
 
 #include <freertos/task.h>
 #include <freertos/event_groups.h>
+#include <freertos/semphr.h>
+
+#include <atomic>
 
 #include <util/delay.hpp>
 
@@ -38,6 +41,8 @@ namespace Scheduler
 		// We use 1 bit for restart request (MSB),
 		// so the maximum amount of tasks that can be added to the scheduler is 23.
 		static EventGroupHandle_t s_tasksEventGroup = xEventGroupCreate();
+		static SemaphoreHandle_t s_runNowSignal = xSemaphoreCreateBinary();
+		static std::atomic<bool> s_runNowRequested{false};
 		static EventBits_t s_startedTaskBits = 0;
 
 		static time_t s_schedulerStartTime = time(nullptr);
@@ -169,6 +174,8 @@ namespace Scheduler
 			while (true)
 			{
 				ESP_LOGD(TAG, "Starting scheduler.");
+				// "Nu meten" from the device menu: this round runs every task, whatever the interval.
+				const bool runAllNow = runImmediately || s_runNowRequested.exchange(false);
 
 				// Reset started task bits and count.
 				s_startedTaskBits = 0;
@@ -181,7 +188,7 @@ namespace Scheduler
 				{
 					// Check if the bootMinute is exactly a multiple of the interval
 					// or tasks need to run immediately.
-					if (GetCurrentTaskTime() % static_cast<time_t>(task.interval_s) == 0 || runImmediately)
+					if (GetCurrentTaskTime() % static_cast<time_t>(task.interval_s) == 0 || runAllNow)
 					{
 						ESP_LOGD(TAG, "Starting task \"%s\".", task.name.c_str());
 
@@ -398,5 +405,16 @@ namespace Scheduler
 	void RequestRestart()
 	{
 		xEventGroupSetBits(s_tasksEventGroup, EVENT_REQUEST_RESTART);
+	}
+
+	void RequestRunNow()
+	{
+		s_runNowRequested = true;
+		xSemaphoreGive(s_runNowSignal);
+	}
+
+	bool DelayOrRunNow(TickType_t ticks)
+	{
+		return xSemaphoreTake(s_runNowSignal, ticks) == pdTRUE;
 	}
 } // namespace Scheduler

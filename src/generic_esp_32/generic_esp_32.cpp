@@ -47,6 +47,7 @@
 
 #ifdef CONFIG_TWOMES_PRESENCE_DETECTION
 #include <control_panel.hpp>
+#include <device_menu.hpp>
 #endif // CONFIG_TWOMES_PRESENCE_DETECTION
 
 #ifdef ESP32DEV
@@ -1165,6 +1166,10 @@ namespace GenericESP32Firmware
         if (GetBearer().empty())
             HandleActivationFailure(); // does not return
 
+#ifdef M5STACK_COREINK
+        // The dial menu (Status, Batterij, Nu meten, Wifi opnieuw, ...); presence detection adds "Smartphones".
+        DeviceMenu::Start();
+#endif // M5STACK_COREINK
 #ifdef CONFIG_TWOMES_PRESENCE_DETECTION
         ControlPanel::initialzeButtons();
 #endif // CONFIG_TWOMES_PRESENCE
@@ -1304,6 +1309,76 @@ namespace GenericESP32Firmware
         s_screen.DisplayMessage(s_shortName.empty() ? std::string("Gekoppeld") : s_shortName,
                                 {"Gekoppeld.", "De eerste meting verschijnt hier binnen enkele minuten."}, "");
 #endif // M5STACK_COREINK
+    }
+
+    std::vector<std::string> MenuStatusLines()
+    {
+        std::vector<std::string> lines;
+        lines.push_back(GetDeviceServiceName());
+        // Compact like the header: "v1.2.0-rc.16" -> "1.2.0r16".
+        std::string version = esp_ota_get_app_description()->version;
+        if (!version.empty() && version[0] == 'v')
+            version.erase(0, 1);
+        auto rc = version.find("-rc.");
+        if (rc != std::string::npos)
+            version.replace(rc, 4, "r");
+        lines.push_back("Firmware " + version);
+        auto badge = ServerBadge();
+        lines.push_back("Server: " + (badge.empty() ? std::string("productie") : badge));
+        // The stored network, also when the radio is off between rounds; the signal only when connected now.
+        wifi_config_t config{};
+        std::string ssid;
+        if (esp_wifi_get_config(WIFI_IF_STA, &config) == ESP_OK)
+            ssid = reinterpret_cast<const char *>(config.sta.ssid);
+        wifi_ap_record_t ap{};
+        bool associated = esp_wifi_sta_get_ap_info(&ap) == ESP_OK;
+        lines.push_back("Wifi: " + (ssid.empty() ? std::string("onbekend") : ssid));
+        if (associated)
+            lines.push_back("Signaal: " + std::to_string(ap.rssi) + " dBm");
+        time_t last = SecureUpload::Queue::GetInstance().LastSuccessfulUpload();
+        if (last > 0)
+        {
+            struct tm sent, today;
+            LocalTimeForScreen(last, sent);
+            LocalTimeForScreen(time(nullptr), today);
+            lines.push_back("Verstuurd: " + LocalTime::SentNl(sent, today, today.tm_year + 1900 >= 2024));
+        }
+        else
+            lines.push_back("Verstuurd: nog niet");
+        int code = SecureUpload::Queue::GetInstance().LastStatusCode();
+        if (code != 0)
+            lines.push_back("Laatste code: " + (code < 0 ? std::string("geen verbinding") : std::to_string(code)));
+        lines.push_back("Onverzonden: " + std::to_string(SecureUpload::PersistentStore::GetInstance().Pending()));
+        return lines;
+    }
+
+    std::vector<std::string> MenuBatteryLines()
+    {
+        BatteryMonitor::Reading battery;
+        if (!M5CoreInkSpecific::GetBatteryReading(battery))
+            return {"Nog niet gemeten"};
+        auto comma = [](std::string text)
+        {
+            for (auto &c : text)
+                if (c == '.')
+                    c = ',';
+            return text;
+        };
+        char text[32];
+        std::vector<std::string> lines;
+        std::snprintf(text, sizeof(text), "Spanning: %.2f V", battery.voltage);
+        lines.push_back(comma(text));
+        if (battery.soc >= 0)
+            lines.push_back("Lading: " + std::to_string(static_cast<int>(battery.soc * 100 + 0.5)) + "%");
+        lines.push_back(battery.usb ? "Voeding: ja (USB)" : "Voeding: nee, batterij");
+        if (!battery.usb && battery.hours >= 0)
+            lines.push_back("Nog: " + BatteryMonitor::HoursText(battery.hours));
+        return lines;
+    }
+
+    void ShowInfoQR()
+    {
+        s_screen.DisplayInfoQR();
     }
 
     namespace
