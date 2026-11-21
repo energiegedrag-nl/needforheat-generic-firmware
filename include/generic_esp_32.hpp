@@ -117,6 +117,15 @@ namespace GenericESP32Firmware
 
     /** Draw the last overview again with fresh upload state (called after each upload); nothing before the first. */
     void RefreshStatus();
+
+    /** Lines of the Status page of the device menu (DeviceMenu): name, firmware, server, Wi-Fi, uploads. */
+    std::vector<std::string> MenuStatusLines();
+
+    /** Lines of the Batterij page of the device menu: voltage, charge, power supply, hours left. */
+    std::vector<std::string> MenuBatteryLines();
+
+    /** The info QR code (link to the manual) on the screen, for "Info" in the device menu. */
+    void ShowInfoQR();
 #endif
 
     /**

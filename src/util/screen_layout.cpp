@@ -589,20 +589,68 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 		DrawLabel(status.bigUnit, unitX, STATUS_BIG_BASE, W - MARGIN - unitX);
 	}
 
-	// Tiles.
+	// Tiles. Each tile is as wide as its value needs in the value font (plus its inner margins); what is left is shared
+	// equally. So "20,5°C" gets a wider tile than "48%" or "2" and keeps the large font (21-11). When the values do
+	// not fit together, all tiles get the same width and a value that does not fit gets a smaller font, as before.
 	size_t n = std::min<size_t>(status.tiles.size(), 3);
 	if (n > 0)
 	{
-		int tileW = W / static_cast<int>(n);
-		m_canvas.fillRect(0, STATUS_TILES_LINE, W, 2, BLACK);
+		std::vector<int> widths(n, W / static_cast<int>(n));
+		int needed = 0;
+		std::vector<int> need(n), least(n);
 		for (size_t i = 0; i < n; i++)
 		{
-			int tx = static_cast<int>(i) * tileW;
+			int inner = (i > 0 ? 4 : MARGIN) + 2;
+			// The label (an icon or a word) must fit too, not only the value.
+			const std::string &label = status.tiles[i].first;
+			int labelW = 0;
+			if (label.rfind("icon:", 0) == 0)
+			{
+				const Icons::Icon *icon = Icons::Find(label.c_str() + 5);
+				labelW = icon != nullptr ? icon->width : 0;
+			}
+			else
+			{
+				m_canvas.setFont(m_fonts.text);
+				labelW = LabelWidth(label);
+			}
+			m_canvas.setFont(m_fonts.value);
+			need[i] = std::max(m_canvas.textWidth(status.tiles[i].second.c_str()), labelW) + inner;
+			least[i] = labelW + inner;
+			needed += need[i];
+		}
+		if (needed <= W)
+		{
+			int spare = (W - needed) / static_cast<int>(n);
+			for (size_t i = 0; i < n; i++)
+				widths[i] = need[i] + spare;
+		}
+		else
+		{
+			// Not everything fits in the large font: every label (icon or word) gets its own width first, the rest
+			// is shared in proportion to what the values still need, so a long value ("-10,5°C") gets more room than
+			// "12"; the font of each value then shrinks only as far as needed. If even the labels do not fit: equal.
+			int leastSum = 0, extraSum = 0;
+			for (size_t i = 0; i < n; i++)
+			{
+				leastSum += least[i];
+				extraSum += need[i] - least[i];
+			}
+			if (leastSum < W && extraSum > 0)
+				for (size_t i = 0; i < n; i++)
+					widths[i] = least[i] + (W - leastSum) * (need[i] - least[i]) / extraSum;
+		}
+		m_canvas.fillRect(0, STATUS_TILES_LINE, W, 2, BLACK);
+		int tx = 0;
+		for (size_t i = 0; i < n; i++)
+		{
 			if (i > 0)
 				m_canvas.fillRect(tx - 1, STATUS_TILES_LINE, 2, bottom - STATUS_TILES_LINE, BLACK);
 			int textX = tx + (i > 0 ? 4 : MARGIN);
-			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder of W / n.
-			int maxW = (i + 1 == n ? W : tx + tileW) - textX - 2;
+			// The last tile ends at the screen edge, not at a divider: it also gets the rounding remainder.
+			int tileEnd = i + 1 == n ? W : tx + widths[i];
+			int maxW = tileEnd - textX - 2;
+			tx = tileEnd;
 			m_canvas.setFont(m_fonts.text);
 			DrawLabelOrIcon(status.tiles[i].first, textX, STATUS_TILE_LABEL_BASE, STATUS_TILES_LINE + 4, maxW);
 			for (auto font : {m_fonts.value, m_fonts.title, m_fonts.text})

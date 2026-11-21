@@ -1,4 +1,5 @@
 #include <control_panel.hpp>
+#include <device_menu.hpp>
 #include <mac_address.hpp>
 
 #include <cstdlib>
@@ -109,24 +110,39 @@ namespace ControlPanel
     }
 
 
-    void ExitControlPanel()
+    /** Leave the smartphones list: release Bluetooth (doing this after the e-ink update seems more stable). */
+    void ResetState()
     {
-        // Back to the overview (the old info QR screen is not used any more: with an empty info URL nothing was
-        // drawn, so the menu stayed on the screen after "terug" and after the time-out).
-#ifdef M5STACK_COREINK
-        sc.CloseMenu(); // otherwise DisplayStatus() skips drawing: the menu was used just now
-        GenericESP32Firmware::RefreshStatus();
-#else
-        sc.DisplayInfoQR();
-#endif
         menuState = Menu::idle;
-
-        // Release bluetooth (doing this after e-ink update screen seems more stable)
         if (useBluetoothPtr != nullptr)
         {
             delete useBluetoothPtr;
             useBluetoothPtr = nullptr;
         }
+    }
+
+    /** Time-out (2 min without the dial): back to the overview. */
+    void ExitControlPanel()
+    {
+#ifdef M5STACK_COREINK
+        // Part of the device menu: the menu closes (and calls ResetState through Submenu::close).
+        ResetState();
+        DeviceMenu::Close();
+#else
+        sc.DisplayInfoQR();
+        ResetState();
+#endif
+    }
+
+    /** "terug" at the top of the smartphones list: back to the device menu. */
+    void LeaveToDeviceMenu()
+    {
+        ResetState();
+#ifdef M5STACK_COREINK
+        DeviceMenu::SubmenuDone();
+#else
+        sc.DisplayInfoQR();
+#endif
     }
 
     void ExitOnboardingScreen()
@@ -221,7 +237,7 @@ namespace ControlPanel
                 {
                     if (highlightedLine == (getSmartphones().size() + 2)) {
                         s_timer.Stop();
-                        ExitControlPanel();
+                        LeaveToDeviceMenu();
                     } else {
                         menuState = Menu::delete_onboarded;
                         smartphoneIndex = highlightedLine - 2;// phone
@@ -318,6 +334,21 @@ namespace ControlPanel
 
     void initialzeButtons()
     {
+#ifdef M5STACK_COREINK
+        // The device menu owns the dial (GPIO 37, 38, 39) and forwards it while "Smartphones" is open.
+        DeviceMenu::SetSubmenu({"Smartphones",
+                                []
+                                {
+                                    if (menuState == Menu::idle)
+                                        press(); // idle + any button opens the list
+                                },
+                                up, press, down,
+                                []
+                                {
+                                    s_timer.Stop();
+                                    ResetState();
+                                }});
+#else
         // Configure GPIO for calibration button.
         gpio_config_t leftButton = {};
         leftButton.intr_type = GPIO_INTR_NEGEDGE;
@@ -349,6 +380,7 @@ namespace ControlPanel
         Buttons::ButtonPressHandler::AddButton(GPIO_NUM_38, "Press", 0, press, nullptr);
         Buttons::ButtonPressHandler::AddButton(GPIO_NUM_39, "Down", 0, down, nullptr);
         Buttons::ButtonPressHandler::AddButton(GPIO_NUM_37, "Up", 0, up, nullptr);
+#endif // M5STACK_COREINK
 
         auto success = xTaskCreatePinnedToCore(MenuTask,
                                                "MenuTask",

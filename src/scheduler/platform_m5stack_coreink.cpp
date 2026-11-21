@@ -16,6 +16,7 @@
 #include <specific_m5coreink/powerpin.h>
 #include <specific_m5coreink/rtc.h>
 #include <util/screen.hpp>
+#include <scheduler.hpp>
 
 constexpr const char *TAG = "Scheduler";
 
@@ -53,9 +54,8 @@ namespace M5StackCoreInk
         {
             ESP_LOGD(TAG, "Delaying for %li seconds", inactiveTime_s);
 
-            // Delay until the next task time.
-            auto lastWakeTime = xTaskGetTickCount();
-            vTaskDelayUntil(&lastWakeTime, Delay::Seconds(inactiveTime_s));
+            // Delay until the next task time (or less: "Nu meten" in the device menu).
+            Scheduler::DelayOrRunNow(Delay::Seconds(inactiveTime_s));
             return;
         }
         else if (/*inactiveTime_s >= LIGHT_SLEEP_THRESHOLD_s && inactiveTime_s < POWER_OFF_THRESHOLD_s*/ false)
@@ -106,10 +106,9 @@ namespace M5StackCoreInk
 
             ESP_LOGD(TAG, "Unable to shutdown because USB power is connected. Delaying instead.");
 
-            // Delay until the next task time
-            // in case the device did not power off.
-            auto lastWakeTime = xTaskGetTickCount();
-            vTaskDelayUntil(&lastWakeTime, Delay::Seconds(inactiveTime_s));
+            // Delay until the next task time in case the device did not power off (on USB); "Nu meten" in the device
+            // menu ends the wait early.
+            Scheduler::DelayOrRunNow(Delay::Seconds(inactiveTime_s));
         }
     }
 } // namespace M5StackCoreInk
