@@ -596,13 +596,26 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	if (n > 0)
 	{
 		std::vector<int> widths(n, W / static_cast<int>(n));
-		m_canvas.setFont(m_fonts.value);
 		int needed = 0;
 		std::vector<int> need(n);
 		for (size_t i = 0; i < n; i++)
 		{
 			int inner = (i > 0 ? 4 : MARGIN) + 2;
-			need[i] = m_canvas.textWidth(status.tiles[i].second.c_str()) + inner;
+			// The label (an icon or a word) must fit too, not only the value.
+			const std::string &label = status.tiles[i].first;
+			int labelW = 0;
+			if (label.rfind("icon:", 0) == 0)
+			{
+				const Icons::Icon *icon = Icons::Find(label.c_str() + 5);
+				labelW = icon != nullptr ? icon->width : 0;
+			}
+			else
+			{
+				m_canvas.setFont(m_fonts.text);
+				labelW = LabelWidth(label);
+			}
+			m_canvas.setFont(m_fonts.value);
+			need[i] = std::max(m_canvas.textWidth(status.tiles[i].second.c_str()), labelW) + inner;
 			needed += need[i];
 		}
 		if (needed <= W)
