@@ -597,7 +597,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 	{
 		std::vector<int> widths(n, W / static_cast<int>(n));
 		int needed = 0;
-		std::vector<int> need(n);
+		std::vector<int> need(n), least(n);
 		for (size_t i = 0; i < n; i++)
 		{
 			int inner = (i > 0 ? 4 : MARGIN) + 2;
@@ -616,6 +616,7 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			}
 			m_canvas.setFont(m_fonts.value);
 			need[i] = std::max(m_canvas.textWidth(status.tiles[i].second.c_str()), labelW) + inner;
+			least[i] = labelW + inner;
 			needed += need[i];
 		}
 		if (needed <= W)
@@ -624,12 +625,20 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			for (size_t i = 0; i < n; i++)
 				widths[i] = need[i] + spare;
 		}
-		else if (needed > 0)
+		else
 		{
-			// Not everything fits in the large font: share the width in proportion to the need, so a long value
-			// ("-10,5°C") gets more room than "12"; the font of each value then shrinks only as far as needed.
+			// Not everything fits in the large font: every label (icon or word) gets its own width first, the rest
+			// is shared in proportion to what the values still need, so a long value ("-10,5°C") gets more room than
+			// "12"; the font of each value then shrinks only as far as needed. If even the labels do not fit: equal.
+			int leastSum = 0, extraSum = 0;
 			for (size_t i = 0; i < n; i++)
-				widths[i] = W * need[i] / needed;
+			{
+				leastSum += least[i];
+				extraSum += need[i] - least[i];
+			}
+			if (leastSum < W && extraSum > 0)
+				for (size_t i = 0; i < n; i++)
+					widths[i] = least[i] + (W - leastSum) * (need[i] - least[i]) / extraSum;
 		}
 		m_canvas.fillRect(0, STATUS_TILES_LINE, W, 2, BLACK);
 		int tx = 0;
