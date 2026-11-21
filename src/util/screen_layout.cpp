@@ -611,6 +611,13 @@ std::string ScreenLayout::DrawStatus(const Status &status)
 			for (size_t i = 0; i < n; i++)
 				widths[i] = need[i] + spare;
 		}
+		else if (needed > 0)
+		{
+			// Not everything fits in the large font: share the width in proportion to the need, so a long value
+			// ("-10,5°C") gets more room than "12"; the font of each value then shrinks only as far as needed.
+			for (size_t i = 0; i < n; i++)
+				widths[i] = W * need[i] / needed;
+		}
 		m_canvas.fillRect(0, STATUS_TILES_LINE, W, 2, BLACK);
 		int tx = 0;
 		for (size_t i = 0; i < n; i++)

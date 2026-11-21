@@ -159,7 +159,7 @@ namespace
 			 }},
 			{"33-menu-battery", [](ScreenLayout &l)
 			 {
-				 l.DrawMenu({"Batterij", "Spanning: 3,95 V", "Lading: 78%", "Voeding: nee, batterij", "Nog: ±18 u",
+				 l.DrawMenu({"Batterij", "Spanning: 3,95 V", "Lading: 78%", "Voeding: nee", "Nog: ±18 u",
 							 "terug"},
 							0);
 			 }},

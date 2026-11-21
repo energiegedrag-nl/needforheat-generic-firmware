@@ -1370,7 +1370,7 @@ namespace GenericESP32Firmware
         lines.push_back(comma(text));
         if (battery.soc >= 0)
             lines.push_back("Lading: " + std::to_string(static_cast<int>(battery.soc * 100 + 0.5)) + "%");
-        lines.push_back(battery.usb ? "Voeding: ja (USB)" : "Voeding: nee, batterij");
+        lines.push_back(battery.usb ? "Voeding: ja" : "Voeding: nee");
         if (!battery.usb && battery.hours >= 0)
             lines.push_back("Nog: " + BatteryMonitor::HoursText(battery.hours));
         return lines;
