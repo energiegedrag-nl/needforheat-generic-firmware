@@ -139,6 +139,7 @@ namespace GenericESP32Firmware
 
         static EventGroupHandle_t s_wifiEventGroup;
         static bool s_wifiInitialized = false;
+        static int s_wifiConnectRetries = 0;
 
         // Wi-Fi after provisioning (21-11). Without this a device that stays on gave up after 10 quick retries when
         // its network went away and never connected again; on battery every boot searched up to 5 minutes and then
@@ -223,7 +224,6 @@ namespace GenericESP32Firmware
                 NVS::Set(NVS_NAMESPACE, "wifi_skip", static_cast<uint32_t>(0));
             }
         }
-        static int s_wifiConnectRetries = 0;
 
         static bool s_postProvisioningNeeded = false;
 
