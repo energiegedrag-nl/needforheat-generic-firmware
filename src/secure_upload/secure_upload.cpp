@@ -180,6 +180,8 @@ namespace SecureUpload
 
 	void Queue::Upload()
 	{
+		// After a Wi-Fi outage a device that stays on has to connect again itself (it gave up after 10 retries).
+		GenericESP32Firmware::EnsureWifi();
 		UploadPersistent();
 		UploadMemory();
 	}

@@ -162,6 +162,7 @@ namespace DeviceMenu
         {
             Display().CloseMenu();
             Display().DisplayMessage("Nu meten", {"De module meet en verstuurt nu.", "Zo meteen verschijnt het overzicht."}, "");
+            GenericESP32Firmware::RequestWifiAttempt();
             Scheduler::RequestRunNow();
             vTaskDelay(Delay::Seconds(3));
             s_state = State::Idle;

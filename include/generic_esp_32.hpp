@@ -74,6 +74,16 @@ namespace GenericESP32Firmware
     void ResetWireless();
 
     /**
+     * Make sure Wi-Fi is connected before an upload: when it is not, try to connect again (a fresh round of retries)
+     * and wait up to maxWaitMs. Returns whether it is connected. Without this a device that stays on (USB power)
+     * gave up after 10 quick retries when its network went away, and never connected again until a restart (21-11).
+     */
+    bool EnsureWifi(int maxWaitMs = 20 * 1000);
+
+    /** "Nu meten" in the device menu: try Wi-Fi in this round even when the battery backoff would skip it. */
+    void RequestWifiAttempt();
+
+    /**
      * Blink an LED on the device.
      *
      * @param gpioNum GPIO number where LED is connected.
