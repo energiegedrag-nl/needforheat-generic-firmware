@@ -127,6 +127,7 @@ namespace GenericESP32Firmware
         static volatile bool s_provisioningScreen = false; // the provisioning QR is shown and the device is not provisioned
         static volatile bool s_preActionRunning = false;
         static volatile TickType_t s_preConfirmUntil = 0; // confirmation possible until this tick; 0: not asked
+        static volatile bool s_preAskShown = false;      // the countdown task of the question is running
         static std::string s_provisioningQrPayload;
         constexpr int PRE_ACTION_CONFIRM_S = 30;
 #endif // M5STACK_COREINK
@@ -785,31 +786,56 @@ namespace GenericESP32Firmware
             vTaskDelete(nullptr);
         }
 
-        /** Dial held pressed for 5 s on the provisioning screen: ask for confirmation. */
-        void PreActionAsk()
+        /**
+         * The question with its countdown, in its own task. It used to run inside the long-press callback, i.e. in
+         * the one task that handles all buttons: for those 30 s no other button event was handled, so the confirming
+         * turn down was only seen after the question had already expired, and neither direction did anything (21-11).
+         */
+        void PreAskTask(void *)
         {
-            if (!s_provisioningScreen || s_preActionRunning || s_preAction.run == nullptr)
-                return;
             // USB is a hint, not a refusal: the reading may date from boot (before the cable was pulled), and a full
             // battery just off the charger looks like USB. Indoors the action itself fails on implausible values.
             BatteryMonitor::Reading battery;
             std::vector<std::string> paragraphs{s_preAction.question, "Draai het wieltje omlaag om te bevestigen."};
             if (M5CoreInkSpecific::GetBatteryReading(battery) && battery.usb)
                 paragraphs.insert(paragraphs.begin() + 1, "Haal de USB-kabel los, als die er nog in zit.");
-            s_preConfirmUntil = xTaskGetTickCount() + pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000);
             // Count down in steps of 5 s (each step is a fast e-ink refresh); stop as soon as it is confirmed.
             constexpr int STEP_S = 5;
+            constexpr int POLL_MS = 100;
             for (int left = PRE_ACTION_CONFIRM_S; left > 0; left -= STEP_S)
             {
                 if (s_preConfirmUntil == 0 || s_preActionRunning || !s_provisioningScreen)
                     break;
                 s_screen.DisplayMessage(s_preAction.title, paragraphs, "nog " + std::to_string(left) + " s");
-                vTaskDelay(pdMS_TO_TICKS(STEP_S * 1000));
+                for (int waited = 0; waited < STEP_S * 1000; waited += POLL_MS)
+                {
+                    if (s_preConfirmUntil == 0 || s_preActionRunning || !s_provisioningScreen)
+                        break;
+                    vTaskDelay(pdMS_TO_TICKS(POLL_MS));
+                }
             }
             if (s_preConfirmUntil != 0 && s_provisioningScreen && !s_preActionRunning)
             {
                 s_preConfirmUntil = 0; // not confirmed: back to the provisioning screen
                 ShowProvisioningQR();
+            }
+            s_preAskShown = false;
+            vTaskDelete(nullptr);
+        }
+
+        /** Dial held pressed for 5 s on the provisioning screen: ask for confirmation (returns at once). */
+        void PreActionAsk()
+        {
+            if (!s_provisioningScreen || s_preActionRunning || s_preAction.run == nullptr)
+                return;
+            s_preConfirmUntil = xTaskGetTickCount() + pdMS_TO_TICKS(PRE_ACTION_CONFIRM_S * 1000);
+            if (s_preAskShown)
+                return; // already counting down: the new deadline counts
+            s_preAskShown = true;
+            if (xTaskCreatePinnedToCore(PreAskTask, "PreProvisioningAsk", 4096, nullptr, 2, nullptr, APP_CPU_NUM) != pdPASS)
+            {
+                s_preAskShown = false;
+                s_preConfirmUntil = 0;
             }
         }
 
